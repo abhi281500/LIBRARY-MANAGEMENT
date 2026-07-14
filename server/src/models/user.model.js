@@ -21,12 +21,16 @@ const UserSchema = new mongoose.Schema({
     phone: {
         type: String,
         trim: true
-       
+
     },
     role: {
         type: String,
-        enum: ['Super_Admin', 'Library_Admin', 'Student'],
-        default: 'Library_Admin'
+        enum: [
+            "SUPER_ADMIN",
+            "LIBRARY_OWNER",
+            "STUDENT"
+        ],
+        default: 'LIBRARY_OWNER'
     },
     subscription: {
         type: String,
@@ -39,13 +43,13 @@ const UserSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-UserSchema.pre('save', async function (next) {
+UserSchema.pre('save', async function () {
     if (!this.isModified('password')) {
-        return next();
+        return ;
     }
 
     this.password = await hashPassword(this.password);
-    next();
+;
 });
 
 UserSchema.methods.comparePassword = async function (password) {
