@@ -32,16 +32,13 @@ const UserSchema = new mongoose.Schema({
         ],
         default: 'LIBRARY_OWNER'
     },
-    subscription: {
-        type: String,
-        enum: ['Free', 'Pro', 'Enterprise'],
-        default: 'Free'
-    },
+    
     isVerified: {
         type: Boolean,
         default: false
     }
-}, { timestamps: true });
+},
+ { timestamps: true });
 
 UserSchema.pre('save', async function () {
     if (!this.isModified('password')) {
