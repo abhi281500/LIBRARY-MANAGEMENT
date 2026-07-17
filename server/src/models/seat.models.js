@@ -37,5 +37,13 @@ const SeatSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
-
+SeatSchema.index(
+    {
+        library: 1,
+        seatNumber: 1
+    },
+    {
+        unique: true
+    }
+);
 export default mongoose.model("Seat", SeatSchema);
