@@ -4,28 +4,28 @@ import auth from "../middlewares/auth.middlewares.js"
 import roleMiddleware from "../middlewares/role.middlewares.js"
 const router = express.Router();
 
-router.post("/students",
+router.post("/",
     auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
      createStudent);    
 
 
-router.get("/students",auth,
+router.get("/",auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
      getAllStudents);
 
 
-router.get("/students/:id",auth,
+router.get("/:id",auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
      getStudentById);
 
 
-router.put("/students/:id",auth,
+router.put("/:id",auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
      updateStudent);
 
 
-router.delete("/students/:id",auth,
+router.delete("/:id",auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
      deleteStudent);
 

@@ -1,5 +1,5 @@
-import Payment from "../models/payment.model.js";
-import Library from "../models/library.model.js";
+import Payment from "../models/payment.models.js";
+import Library from "../models/library.models.js";
 
 export const getMonthlyRevenue = async (req, res) => {
     try {

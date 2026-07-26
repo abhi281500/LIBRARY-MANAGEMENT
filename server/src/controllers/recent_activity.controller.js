@@ -1,6 +1,6 @@
-import Booking from "../models/booking.model.js";
-import Payment from "../models/payment.model.js";
-import Library from "../models/library.model.js";
+import Booking from "../models/booking.models.js";
+import Payment from "../models/payment.models.js";
+import Library from "../models/library.models.js";
 
 export const getRecentActivities = async (req, res) => {
     try {

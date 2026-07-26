@@ -6,6 +6,9 @@ import mongoose from "mongoose";
 import ApiFeatures from "../utils/apifeatures.js";
 
 export const createBooking = async (req, res) => {
+  console.log("Content-Type:", req.headers["content-type"]);
+    console.log("Body:", req.body);
+
   try {
     const { studentId, seatId, startDate, endDate, amount } = req.body;
 

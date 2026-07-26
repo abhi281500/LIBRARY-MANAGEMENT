@@ -36,7 +36,7 @@ router.delete(
     auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
     deleteLibrary
-);router.post(
+); router.post(
     "/",
     auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),

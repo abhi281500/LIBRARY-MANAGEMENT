@@ -40,7 +40,7 @@ const BookingSchema = new mongoose.Schema({
         default: "ACTIVE"
     },
     amount :{
-        type : string ,
+        type :String ,
         required : true
     }
 }, {

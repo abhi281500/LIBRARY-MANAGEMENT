@@ -6,28 +6,28 @@ const router = express.Router();
 
 
 router.post(
-    "/seats",
+    "/",
     auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
     createSeat
 );
 
 router.get(
-    "/seats",
+    "/",
     auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
      getAllSeats
 );
 
 router.get(
-    "/seats/:id",
+    "/:id",
     auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
      getSeatById
 );
 
 router.put(
-    "/seats/:id",
+    "/:id",
     auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
      updateSeat
@@ -35,7 +35,7 @@ router.put(
 
 
 router.delete(
-    "/seats/:id",
+    "/:id",
     auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
      deleteSeat

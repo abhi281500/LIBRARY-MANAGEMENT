@@ -1,5 +1,5 @@
 import Student from "../models/student.models.js";
-import User from "../models/user.model.js";
+import User from "../models/user.models.js";
 import Library from "../models/library.models.js";
 import ApiFeatures from "../utils/apifeatures.js";
 import mongoose from "mongoose";

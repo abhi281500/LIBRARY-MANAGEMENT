@@ -1,5 +1,5 @@
-import Seat from "../models/seat.model.js";
-import Library from "../models/library.model.js";
+import Seat from "../models/seat.models.js";
+import Library from "../models/library.models.js";
 
 export const getSeatOccupancy = async (req, res) => {
     try {

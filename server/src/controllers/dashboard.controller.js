@@ -1,8 +1,8 @@
-import Student from "../models/student.model.js";
-import Seat from "../models/seat.model.js";
-import Booking from "../models/booking.model.js";
-import Payment from "../models/payment.model.js";
-import Library from "../models/library.model.js";
+import Student from "../models/student.models.js";
+import Seat from "../models/seat.models.js";
+import Booking from "../models/booking.models.js";
+import Payment from "../models/payment.models.js";
+import Library from "../models/library.models.js";
 
 export const getDashboard = async (req, res) => {
     try {
