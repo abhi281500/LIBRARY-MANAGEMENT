@@ -5,7 +5,7 @@ import {
   getMe,
 } from "../controllers/auth.controller.js";
 
-import auth from "../middlewares/auth.middleware.js";
+import auth from "../middlewares/auth.middlewares.js";
 
 const router = express.Router();
 
