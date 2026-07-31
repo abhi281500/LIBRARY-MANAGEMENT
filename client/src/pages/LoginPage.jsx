@@ -4,73 +4,93 @@ import { loginSchema } from "../schemas/auth.schema.js";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { login as loginUser} from "../services/auth.service.js";
+import { login as loginUser } from "../services/auth.service.js";
 import { useAuth } from "../hooks/useAuth.jsx";
-
+import Input from "../components/ui/Input.jsx";
+import Button from "../components/ui/Button.jsx";
+import { Link } from "react-router-dom";
 function LoginPage() {
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
+    register, handleSubmit, formState: { errors }, } = useForm({
+      resolver: zodResolver(loginSchema),
+      defaultValues: {
+        email: "",
+        password: "",
+      },
+    });
 
-  const {login} = useAuth()
-  const navigate = useNavigate() 
+  const { login } = useAuth()
+  const navigate = useNavigate()
 
   const mutation = useMutation({
-  mutationFn: loginUser,
+    mutationFn: loginUser,
 
-  onSuccess: (data) => {
-    login(data.token, data.user);
+    onSuccess: (data) => {
+      login(data.token, data.user);
 
-    toast.success(data.message);
+      toast.success(data.message);
 
-    navigate("/dashboard");
-  },
+      navigate("/dashboard");
+    },
 
-  onError: (error) => {
-    toast.error(
-      error.response?.data?.message || "Login failed"
-    );
-  },
-});
+    onError: (error) => {
+      toast.error(
+        error.response?.data?.message || "Login failed"
+      );
+    },
+  });
 
 
   const onSubmit = (data) => {
     mutation.mutate(data)
-    console.log(data);
+    // console.log(data);
   };
 
-  
+
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <form onSubmit={handleSubmit(onSubmit)}
+     className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg space-y-5"
+    >
       <div>
-        <input
+        <Input
+          label="Email"
           type="email"
-          placeholder="Email"
+          placeholder="Enter your email"
+          error={errors.email?.message}
           {...register("email")}
         />
-        {errors.email && <p>{errors.email.message}</p>}
       </div>
 
       <div>
-        <input
+        <Input
+          label="Password"
           type="password"
-          placeholder="Password"
+          placeholder="Enter your password"
+          error={errors.password?.message}
           {...register("password")}
         />
-        {errors.password && <p>{errors.password.message}</p>}
       </div>
 
-      <button type="submit">Login</button>
+      <Button
+        type="submit"
+        fullWidth
+        loading={mutation.isPending}
+      >
+        Login
+      </Button>
+
+      <p>
+        Don't have an account ?
+        <Link to="/register"
+        className="font-medium text-blue-600 hover:underline"
+        >
+          Signup
+        </Link>
+      </p>
     </form>
+    </div>
   );
 }
 
