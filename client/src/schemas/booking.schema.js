@@ -1,33 +1,31 @@
 import { z } from "zod";
-
-export const registerSchema = z
+  
+export const bookingSchema = z
   .object({
-    name: z
+    studentId: z
       .string()
       .trim()
       .min(3, "Name must be at least 3 characters"),
 
-    email: z
+     seatId: z
       .string()
       .trim()
-      .min(1, "Email is required")
-      .email("Enter a valid email address"),
+      .min(1, "Seat ID is required"),
+     
 
-    phone: z
+    startDate: z
       .string()
-      .min(1, "Phone number is required")
-      .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit phone number"),
+      .min(1, "Start date is required")
+      .refine((date) => !isNaN(Date.parse(date)), "Enter a valid date"),
 
-    password: z
+    endDate: z
       .string()
-      .min(1, "Password is required")
-      .min(8, "Password must be at least 8 characters"),
+      .min(1, "End date is required")
+      .refine((date) => !isNaN(Date.parse(date)), "Enter a valid date"),
 
-    confirmPassword: z
-      .string()
-      .min(1, "Confirm Password is required"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+    amount: z
+      .number()
+      .min(0, "Amount must be a positive number"),
   });
+
+   

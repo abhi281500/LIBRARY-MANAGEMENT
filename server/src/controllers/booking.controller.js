@@ -6,8 +6,6 @@ import mongoose from "mongoose";
 import ApiFeatures from "../utils/apifeatures.js";
 
 export const createBooking = async (req, res) => {
-  console.log("Content-Type:", req.headers["content-type"]);
-    console.log("Body:", req.body);
 
   try {
     const { studentId, seatId, startDate, endDate, amount } = req.body;
@@ -67,6 +65,7 @@ export const createBooking = async (req, res) => {
     }
     const existingBooking = await Booking.findOne({
       seat: seat._id,
+      library: library._id,
       status: "ACTIVE",
     });
 
@@ -76,18 +75,21 @@ export const createBooking = async (req, res) => {
       });
     }
 
+
     const existingStudentBooking = await Booking.findOne({
       student: student._id,
+      library: library._id,
       status: "ACTIVE",
     });
-    if (existingStudentBooking) {
-      return res.status(409).json({
-        message: "Student already has an active booking",
-      });
-    }
     if (new Date(startDate) >= new Date(endDate)) {
       return res.status(400).json({
         message: "End date must be after start date",
+      });
+    }
+
+    if (Number(amount) < 0) {
+      return res.status(400).json({
+        message: "Amount cannot be negative",
       });
     }
 
@@ -149,7 +151,7 @@ export const getAllBookings = async (req, res) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
 
-    const totalBookings = await Student.countDocuments({
+    const totalBookings = await Booking.countDocuments({
       library: library._id,
     });
     const totalPages = Math.ceil(totalBookings / limit);
@@ -230,25 +232,59 @@ export const getBookingById = async (req, res) => {
   }
 };
 
+
 export const updateBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    const { startDate, endDate, amount } = req.body;
+    const {
+      startDate,
+      endDate,
+      amount,
+    } = req.body;
 
-    const library = await Library.findOne({ owner: req.user._id });
+    const library = await Library.findOne({
+      owner: req.user._id,
+    });
+
     if (!library) {
-      return res
-        .status(404)
-        .json({ message: "Library not found for this owner" });
+      return res.status(404).json({
+        message: "Library not found",
+      });
     }
 
-    const booking = await Booking.findOne({ _id: id, library: library._id });
-    if (!booking) return res.status(404).json({ message: "booking not found" });
+    const booking = await Booking.findOne({
+      _id: id,
+      library: library._id,
+    });
 
-    const newStart = startDate || booking.startDate;
-    const newEnd = endDate || booking.endDate;
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found",
+      });
+    }
 
-    if (new Date(newStart) >= new Date(newEnd)) {
+    if (amount !== undefined && Number(amount) < 0) {
+      return res.status(400).json({
+        message: "Amount cannot be negative",
+      });
+    }
+
+    const newStart = startDate ?? booking.startDate;
+    const newEnd = endDate ?? booking.endDate;
+
+    const start = new Date(newStart);
+    const end = new Date(newEnd);
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime())
+    ) {
+      return res.status(400).json({
+        message: "Invalid booking dates",
+      });
+    }
+
+    if (start >= end) {
       return res.status(400).json({
         message: "End date must be after start date",
       });
@@ -258,13 +294,16 @@ export const updateBooking = async (req, res) => {
 
     try {
       await session.startTransaction();
-      booking.startDate = startDate ?? booking.startDate;
-      booking.endDate = endDate ?? booking.endDate;
-      booking.amount = amount ?? booking.amount;
 
-      await booking.save({
-        session,
-      });
+      booking.startDate = start;
+      booking.endDate = end;
+
+      if (amount !== undefined) {
+        booking.amount = Number(amount);
+      }
+
+      await booking.save({ session });
+
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
@@ -278,12 +317,15 @@ export const updateBooking = async (req, res) => {
       booking,
     });
   } catch (error) {
-    console.error(error);
+    console.error("updateBooking error:", error);
+
     return res.status(500).json({
-      message: "internal server error",
+      message: "Internal server error",
     });
   }
 };
+
+
 
 export const cancelBooking = async (req, res) => {
   try {

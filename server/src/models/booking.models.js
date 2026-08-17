@@ -39,9 +39,10 @@ const BookingSchema = new mongoose.Schema({
         ],
         default: "ACTIVE"
     },
-    amount :{
-        type :String ,
-        required : true
+    amount: {
+        type: Number,
+        required: true,
+        min: 0,
     }
 }, {
     timestamps: true
