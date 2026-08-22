@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const studentSchema = z
+export const studentUpdateSchema = z
   .object({
     name: z
       .string()
@@ -14,11 +14,11 @@ export const studentSchema = z
 
     password: z
       .string()
-      .min(6, "Password must be at least 6 characters"),
+      .optional(),
 
     confirmPassword: z
       .string()
-      .min(1, "Confirm Password is required"),
+      .optional(),
 
     phone: z
       .string()
@@ -30,19 +30,22 @@ export const studentSchema = z
       .min(1, "Admission number is required"),
 
     status: z
-      .enum(["ACTIVE", "INACTIVE"])
-      .default("ACTIVE"),
+      .enum(["ACTIVE", "INACTIVE"]),
 
     joiningDate: z
-  .string()
-  .min(1, "Joining date is required")
-  .regex(
-    /^\d{4}-\d{2}-\d{2}$/,
-    "Enter a valid date"
-  ),
+      .string()
+      .optional(),
   })
   .refine(
-    (data) => data.password === data.confirmPassword,
+    (data) => {
+      // Password change nahi kar raha
+      if (!data.password && !data.confirmPassword) {
+        return true;
+      }
+
+      // Password change kar raha hai
+      return data.password === data.confirmPassword;
+    },
     {
       message: "Passwords do not match",
       path: ["confirmPassword"],

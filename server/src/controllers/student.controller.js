@@ -6,10 +6,10 @@ import mongoose from "mongoose";
 
 export const createStudent = async (req, res) => {
   try {
-    const { name, email, password, phone, admissionNumber } = req.body;
+    const { name, email, password, phone, admissionNumber ,joiningDate,status} = req.body;
 
     // 1. Validation
-    if (!name || !email || !password || !phone || !admissionNumber) {
+    if (!name || !email || !password || !phone || !admissionNumber  ) {
       return res.status(400).json({
         message: "Please fill all required fields",
       });
@@ -63,6 +63,8 @@ export const createStudent = async (req, res) => {
             user: newUser[0]._id,
             library: library._id,
             admissionNumber,
+            joiningDate,
+            status,
           },
         ],
         { session },
@@ -177,7 +179,7 @@ export const getStudentById = async (req, res) => {
 export const updateStudent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, admissionNumber } = req.body;
+    const { name, email, phone, admissionNumber,joiningDate,status } = req.body;
 
     const library = await Library.findOne({
       owner: req.user._id,
@@ -232,7 +234,8 @@ export const updateStudent = async (req, res) => {
       });
 
       student.admissionNumber = admissionNumber || student.admissionNumber;
-
+      student.joiningDate = joiningDate || student.joiningDate;
+      student.status = status || student.status;
       await student.save({
         session,
       });
@@ -305,3 +308,5 @@ export const deleteStudent = async (req, res) => {
     });
   }
 };
+
+

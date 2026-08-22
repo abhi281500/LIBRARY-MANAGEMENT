@@ -1,33 +1,26 @@
 import { z } from "zod";
 
-export const registerSchema = z
+export const seatSchema = z
   .object({
-    name: z
+    seatNumber: z
       .string()
       .trim()
-      .min(3, "Name must be at least 3 characters"),
+      .min(1, "Seat number is required"),
 
-    email: z
-      .string()
-      .trim()
-      .min(1, "Email is required")
-      .email("Enter a valid email address"),
 
-    phone: z
-      .string()
-      .min(1, "Phone number is required")
-      .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit phone number"),
+    floor: z
+      .coerce.number()
+      .int("Floor must be a whole number")
+      .min(1, "Floor must be at least 1"),
 
-    password: z
-      .string()
-      .min(1, "Password is required")
-      .min(8, "Password must be at least 8 characters"),
+    type: z
+      .enum(["NORMAL", "PREMIUM"])
+      .default("NORMAL"),
 
-    confirmPassword: z
-      .string()
-      .min(1, "Confirm Password is required"),
+    status: z
+      .enum(["AVAILABLE", "OCCUPIED", "MAINTENANCE"])
+      .default("AVAILABLE"),
+
+    
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
+  

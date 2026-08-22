@@ -101,12 +101,12 @@ export const updateLibrary = async (req, res) => {
         }
 
         // Update
-        library.openTime = openTime || library.openTime;
-        library.closeTime = closeTime || library.closeTime;
-        library.address = address || library.address;
-        library.phone = phone || library.phone;
-        library.description = description || library.description;
-        library.totalSeats = totalSeats || library.totalSeats;
+    library.openTime = openTime ?? library.openTime;
+    library.closeTime = closeTime ?? library.closeTime;
+    library.address = address ?? library.address;
+    library.phone = phone ?? library.phone;
+    library.description = description ?? library.description;
+    library.totalSeats = totalSeats ?? library.totalSeats;
 
         await library.save();
 
@@ -157,4 +157,30 @@ export const deleteLibrary = async (req, res) => {
             message: "Internal Server Error"
         });
     }
+};
+
+
+export const getMyLibrary = async (req, res) => {
+  try {
+    const library = await Library.findOne({
+      owner: req.user._id,
+    });
+
+    if (!library) {
+      return res.status(404).json({
+        message: "Library not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Library fetched successfully",
+      library,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
 };

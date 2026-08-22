@@ -1,13 +1,12 @@
+import  mongoose from 'mongoose';
 import express from "express";
-
 import {
-  createLibrary,
-  getAllLibraries,
-  getMyLibrary,
-  getLibraryById,
-  updateLibrary,
-  deleteLibrary,
-} from "../controllers/library.controller.js";
+  createPayment,
+  getAllPayments,
+  getPaymentById,
+  updatePayment,
+  refundPayment,
+} from "../controllers/payment.controller.js";
 
 import auth from "../middlewares/auth.middlewares.js";
 import roleMiddleware from "../middlewares/role.middlewares.js";
@@ -15,58 +14,47 @@ import roleMiddleware from "../middlewares/role.middlewares.js";
 const router = express.Router();
 
 
-// CREATE LIBRARY
+// CREATE PAYMENT
 router.post(
   "/",
   auth,
   roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
-  createLibrary
+  createPayment
 );
 
-
-// GET MY LIBRARY
-// IMPORTANT: /my must come before /:id
-router.get(
-  "/my",
-  auth,
-  roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
-  getMyLibrary
-);
-
-
-// GET ALL LIBRARIES
+// GET ALL PAYMENTS
 // Only SUPER_ADMIN
 router.get(
   "/",
   auth,
   roleMiddleware("SUPER_ADMIN"),
-  getAllLibraries
+  getAllPayments
 );
 
 
-// GET LIBRARY BY ID
+// GET PAYMENT BY ID
 router.get(
   "/:id",
   auth,
-  getLibraryById
+  getPaymentById
 );
 
 
-// UPDATE LIBRARY
+// UPDATE PAYMENT
 router.put(
   "/:id",
   auth,
   roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
-  updateLibrary
+  updatePayment
 );
 
 
-// DELETE LIBRARY
-router.delete(
-  "/:id",
+// DELETE PAYMENT
+router.post(
+  "/:id/refund",
   auth,
   roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
-  deleteLibrary
+  refundPayment
 );
 
 

@@ -1,5 +1,5 @@
-import Booking from "../models/booking.model.js";
-import Library from "../models/library.model.js";
+import Booking from "../models/booking.models.js";
+import Library from "../models/library.models.js";
 
 export const getBookingTrends = async (req, res) => {
     try {

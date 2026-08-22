@@ -5,17 +5,20 @@ import Seat from "../models/seat.models.js";
 import mongoose from "mongoose";
 import ApiFeatures from "../utils/apifeatures.js";
 
+
 export const createPayment = async (req, res) => {
   try {
-    const { bookingId, amount, paymentMethod } = req.body;
+    const {
+      bookingId,
+      paymentMethod,
+    } = req.body;
 
-    if (!bookingId || amount === undefined || !paymentMethod) {
+    if (!bookingId || !paymentMethod) {
       return res.status(400).json({
-        message: "All fields are required",
+        message: "Booking and payment method are required",
       });
     }
 
-    // Find owner's library
     const library = await Library.findOne({
       owner: req.user._id,
     });
@@ -26,7 +29,6 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    // Find booking
     const booking = await Booking.findOne({
       _id: bookingId,
       library: library._id,
@@ -38,14 +40,12 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    // Booking should be active
     if (booking.status !== "ACTIVE") {
       return res.status(400).json({
         message: "Only active bookings can be paid",
       });
     }
 
-    // Duplicate payment check
     const existingPayment = await Payment.findOne({
       booking: booking._id,
       paymentStatus: "PAID",
@@ -57,32 +57,28 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    // Amount validation
-    if (amount !== booking.amount) {
-      return res.status(400).json({
-        message: "Invalid payment amount",
-      });
-    }
-
-    // Receipt Number
     const receiptNumber = `PAY-${Date.now()}`;
 
     const session = await mongoose.startSession();
+
     let newPayment;
+
     try {
       await session.startTransaction();
-      // Create Payment
+
       newPayment = new Payment({
         booking: booking._id,
         student: booking.student,
         library: booking.library,
-        amount,
+        amount: booking.amount,
         paymentMethod,
         paymentStatus: "PAID",
         paymentDate: new Date(),
         receiptNumber,
       });
+
       await newPayment.save({ session });
+
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
@@ -96,13 +92,14 @@ export const createPayment = async (req, res) => {
       payment: newPayment,
     });
   } catch (error) {
-    console.error(error);
+    console.error("createPayment error:", error);
 
     return res.status(500).json({
-      message: error.message,
+      message: "Internal server error",
     });
   }
 };
+
 
 export const getAllPayments = async (req, res) => {
   try {
@@ -150,7 +147,7 @@ export const getAllPayments = async (req, res) => {
       .sort()
       .paginate();
 
-    const payment = await features.query;
+    const payments = await features.query;
     return res.status(200).json({
       message: "payment retrieved successfully",
       pagination: {
@@ -159,7 +156,7 @@ export const getAllPayments = async (req, res) => {
         totalPayments,
         totalPages: Math.ceil(totalPayments / limit),
       },
-      payment,
+      payments,
     });
   } catch (error) {
     console.error(error);
@@ -275,48 +272,50 @@ export const refundPayment = async (req, res) => {
       });
     }
 
-    const booking = await Booking.findById(payment.booking);
+    if (payment.paymentStatus !== "PAID") {
+      return res.status(400).json({
+        message: "Only paid payments can be refunded",
+      });
+    }
+
+    const booking = await Booking.findOne({
+      _id: payment.booking,
+      library: library._id,
+    });
+
     if (!booking) {
       return res.status(404).json({
         message: "Booking not found",
       });
     }
+
+    const seat = await Seat.findOne({
+      _id: booking.seat,
+      library: library._id,
+    });
+
     if (!seat) {
-        return res.status(404).json({
-          message: "Seat not found",
-        });
-      }
+      return res.status(404).json({
+        message: "Seat not found",
+      });
+    }
 
     const session = await mongoose.startSession();
+
     try {
       await session.startTransaction();
+
       payment.paymentStatus = "REFUNDED";
+      payment.refundDate = new Date();
 
-      await payment.save({
-        session,
-      });
       booking.status = "CANCELLED";
-
-      await booking.save({
-        session,
-      });
-
-      const seat = await Seat.findOne({
-        _id: booking.seat,
-        library: library._id,
-      });
-
-      
 
       seat.status = "AVAILABLE";
 
-      await seat.save({
-        session,
-      });
-      payment.refundDate = new Date();
-      await payment.save({
-        session,
-      });
+      await payment.save({ session });
+      await booking.save({ session });
+      await seat.save({ session });
+
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
@@ -330,10 +329,10 @@ export const refundPayment = async (req, res) => {
       payment,
     });
   } catch (error) {
-    console.error(error);
+    console.error("refundPayment error:", error);
 
     return res.status(500).json({
-      message: error.message,
+      message: "Internal server error",
     });
   }
 };
