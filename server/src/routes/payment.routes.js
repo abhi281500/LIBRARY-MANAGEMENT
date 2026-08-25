@@ -27,7 +27,7 @@ router.post(
 router.get(
   "/",
   auth,
-  roleMiddleware("SUPER_ADMIN"),
+  roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
   getAllPayments
 );
 
@@ -36,6 +36,7 @@ router.get(
 router.get(
   "/:id",
   auth,
+  roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
   getPaymentById
 );
 
