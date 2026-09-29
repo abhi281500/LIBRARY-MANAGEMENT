@@ -175,9 +175,28 @@ export const getPaymentById = async (req, res) => {
         .json({ message: "Library not found for this owner" });
     }
 
-    const payment = await Payment.findOne({ _id: id, library: library._id })
-      .populate("student")
-      .populate("booking");
+    const payment = await Payment.findOne({
+  _id: id,
+  library: library._id,
+})
+.populate({
+  path: "student",
+  populate: {
+    path: "user",
+    select: "name email phone",
+  },
+})
+.populate({
+  path: "booking",
+  populate: {
+    path: "seat",
+    select: "seatNumber",
+  },
+})
+.populate({
+  path: "library",
+  select: "name address",
+});
 
     if (!payment)
       return res.status(404).json({

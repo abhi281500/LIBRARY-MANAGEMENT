@@ -415,3 +415,138 @@ export const deleteSeat = async (req, res) => {
     });
   }
 };
+
+export const bulkCreateSeats = async (req, res) => {
+  try {
+    const { prefix = "S-", start = 1, end = 20, floor = 1, type = "NORMAL" } = req.body;
+
+    const startNum = parseInt(start, 10);
+    const endNum = parseInt(end, 10);
+    const floorNum = parseInt(floor, 10) || 1;
+
+    if (isNaN(startNum) || isNaN(endNum) || startNum > endNum) {
+      return res.status(400).json({ message: "Invalid start or end seat numbers" });
+    }
+
+    if (endNum - startNum + 1 > 200) {
+      return res.status(400).json({ message: "Maximum 200 seats can be generated at once" });
+    }
+
+    const library = await Library.findOne({ owner: req.user._id });
+    if (!library) {
+      return res.status(404).json({ message: "Library not found for this owner" });
+    }
+
+    const existingSeats = await Seat.find({ library: library._id }).select("seatNumber");
+    const existingSet = new Set(existingSeats.map((s) => s.seatNumber.toLowerCase()));
+
+    const seatsToInsert = [];
+    const skippedSeats = [];
+
+    for (let i = startNum; i <= endNum; i++) {
+      const seatNumber = `${prefix ? prefix.trim() : ""}${i}`;
+      if (existingSet.has(seatNumber.toLowerCase())) {
+        skippedSeats.push(seatNumber);
+      } else {
+        seatsToInsert.push({
+          seatNumber,
+          library: library._id,
+          floor: floorNum,
+          type: type === "PREMIUM" ? "PREMIUM" : "NORMAL",
+          status: "AVAILABLE",
+        });
+      }
+    }
+
+    let created = [];
+    if (seatsToInsert.length > 0) {
+      created = await Seat.insertMany(seatsToInsert);
+    }
+
+    return res.status(201).json({
+      message: `Successfully created ${created.length} seats.${skippedSeats.length > 0 ? ` Skipped ${skippedSeats.length} duplicates.` : ""}`,
+      createdCount: created.length,
+      skippedCount: skippedSeats.length,
+      skippedSeats,
+    });
+  } catch (error) {
+    console.error("bulkCreateSeats error:", error);
+    return res.status(500).json({ message: error.message || "Failed to bulk create seats" });
+  }
+};
+
+export const getSeatMatrix = async (req, res) => {
+  try {
+    const library = await Library.findOne({ owner: req.user._id });
+    if (!library) {
+      return res.status(404).json({ message: "Library not found for this owner" });
+    }
+
+    const { shift, floor } = req.query;
+
+    const seatQuery = { library: library._id };
+    if (floor) {
+      seatQuery.floor = Number(floor);
+    }
+
+    const seats = await Seat.find(seatQuery).sort({ floor: 1, seatNumber: 1 });
+
+    const now = new Date();
+    const bookingQuery = {
+      library: library._id,
+      status: "ACTIVE",
+      endDate: { $gte: now },
+    };
+
+    if (shift && shift !== "ALL") {
+      bookingQuery.shift = { $in: [shift, "FULL_DAY"] };
+    }
+
+    const activeBookings = await Booking.find(bookingQuery)
+      .populate({
+        path: "student",
+        populate: { path: "user", select: "name email phone" },
+      })
+      .select("seat student startDate endDate shift amount status");
+
+    const bookingMap = {};
+    activeBookings.forEach((b) => {
+      if (!b.seat) return;
+      const sId = b.seat.toString();
+      if (!bookingMap[sId]) {
+        bookingMap[sId] = [];
+      }
+      bookingMap[sId].push(b);
+    });
+
+    const matrix = seats.map((seat) => {
+      const seatBookings = bookingMap[seat._id.toString()] || [];
+      const isOccupied = seatBookings.length > 0;
+
+      const expiringSoon = seatBookings.some((b) => {
+        const diffDays = (new Date(b.endDate) - now) / (1000 * 60 * 60 * 24);
+        return diffDays >= 0 && diffDays <= 3;
+      });
+
+      return {
+        _id: seat._id,
+        seatNumber: seat.seatNumber,
+        floor: seat.floor,
+        type: seat.type,
+        physicalStatus: seat.status,
+        isOccupied,
+        expiringSoon,
+        activeBookings: seatBookings,
+      };
+    });
+
+    return res.status(200).json({
+      message: "Seat matrix retrieved successfully",
+      totalSeats: seats.length,
+      matrix,
+    });
+  } catch (error) {
+    console.error("getSeatMatrix error:", error);
+    return res.status(500).json({ message: "Failed to retrieve seat matrix" });
+  }
+};

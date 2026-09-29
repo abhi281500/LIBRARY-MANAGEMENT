@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -9,6 +9,7 @@ import { createPayment } from "../../services/payment.service.js";
 
 import Input from "../../components/ui/Input.jsx";
 import Button from "../../components/ui/Button.jsx";
+import { getAllBookings } from "../../services/booking.service.js";
 
 function PaymentPage() {
   const navigate = useNavigate();
@@ -40,14 +41,23 @@ function PaymentPage() {
     onError: (error) => {
       toast.error(
         error.response?.data?.message ||
-          "Failed to create payment"
+        "Failed to create payment"
       );
     },
   });
 
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["bookings"],
+    queryFn: getAllBookings,
+  });
+
+  const bookings = data?.bookings || [];
+
   const onSubmit = (data) => {
     mutation.mutate(data);
   };
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -57,13 +67,25 @@ function PaymentPage() {
       >
 
         {/* BOOKING ID */}
-        <Input
-          label="Booking ID"
-          type="text"
-          placeholder="Enter booking ID"
-          error={errors.bookingId?.message}
+
+        <select
           {...register("bookingId")}
-        />
+          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+        >
+          <option value="">Select Booking</option>
+
+          {bookings.map((booking) => (
+            <option
+              key={booking._id}
+              value={booking._id}
+            >
+              {booking.student.user.name} • {booking.seat.seatNumber} • ₹{booking.amount}
+            </option>
+          ))}
+        </select>
+
+          
+    
 
         {/* PAYMENT METHOD */}
         <label className="block">

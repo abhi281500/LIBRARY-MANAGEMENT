@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -8,9 +8,8 @@ import { createBooking } from "../../services/booking.service.js";
 
 import Input from "../../components/ui/Input.jsx";
 import Button from "../../components/ui/Button.jsx";
-
-
-
+import { getAllStudents } from "../../services/student.service.js";
+import { getAllSeats } from "../../services/seat.service.js";
 
 function BookingPage() {
     const {
@@ -27,6 +26,26 @@ function BookingPage() {
         });
 
     const navigate = useNavigate()
+
+    const { data, isLoading, isError } = useQuery({
+        queryKey: ["students"],
+        queryFn: getAllStudents,
+    });
+
+
+    const students = data?.students || []; 
+
+    
+    const {
+        data: seatData,
+        isLoading: seatsLoading,
+        isError: seatsError,
+    } = useQuery({
+        queryKey: ["seats"],
+        queryFn: getAllSeats,
+    });
+
+    const seats = seatData?.seats || [];
 
     const mutation = useMutation({
         mutationFn: createBooking,
@@ -56,25 +75,33 @@ function BookingPage() {
                 className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg space-y-5"
             >
 
-
-                <Input
-                    label="Student ID"
-                    type="text"
-                    placeholder="Enter student ID"
-                    error={errors.studentId?.message}
+                <select
                     {...register("studentId")}
-                />
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                >
+                    <option value="">Select Student</option>
+
+                    {students.map((student) => (
+                        <option key={student._id} value={student._id}>
+                            {student.user.name}
+                        </option>
+                    ))}
+                </select>
 
 
-
-
-                <Input
-                    label="Seat ID"
-                    type="text"
-                    placeholder="Enter seat ID"
-                    error={errors.seatId?.message}
+                <select
                     {...register("seatId")}
-                />
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                >
+                    <option value="">Select Seat</option>
+
+                    {seats.map((seat) => (
+                        <option key={seat._id} value={seat._id}>
+                            {seat.seatNumber}
+                        </option>
+                    ))}
+                </select>
+
 
 
 

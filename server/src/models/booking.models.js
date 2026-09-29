@@ -30,6 +30,18 @@ const BookingSchema = new mongoose.Schema({
         required: true
     },
 
+    shift: {
+        type: String,
+        enum: [
+            "MORNING",
+            "EVENING",
+            "FULL_DAY",
+            "NIGHT",
+            "CUSTOM"
+        ],
+        default: "FULL_DAY",
+        required: true
+    },
     status: {
         type: String,
         enum: [

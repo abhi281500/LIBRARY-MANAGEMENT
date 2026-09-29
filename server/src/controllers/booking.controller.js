@@ -6,9 +6,8 @@ import mongoose from "mongoose";
 import ApiFeatures from "../utils/apifeatures.js";
 
 export const createBooking = async (req, res) => {
-
   try {
-    const { studentId, seatId, startDate, endDate, amount } = req.body;
+    const { studentId, seatId, startDate, endDate, amount, shift = "FULL_DAY" } = req.body;
 
     if (
       !studentId ||
@@ -21,6 +20,9 @@ export const createBooking = async (req, res) => {
         message: "All fields are required",
       });
     }
+
+    const validShifts = ["MORNING", "EVENING", "FULL_DAY", "NIGHT", "CUSTOM"];
+    const chosenShift = validShifts.includes(shift) ? shift : "FULL_DAY";
 
     // Find owner's library
     const library = await Library.findOne({
@@ -41,7 +43,7 @@ export const createBooking = async (req, res) => {
 
     if (!student) {
       return res.status(404).json({
-        message: "Student not found",
+        message: "Student not found in your library",
       });
     }
 
@@ -53,35 +55,19 @@ export const createBooking = async (req, res) => {
 
     if (!seat) {
       return res.status(404).json({
-        message: "Seat not found",
+        message: "Seat not found in your library",
       });
     }
 
-    // Seat availability check
-    if (seat.status !== "AVAILABLE") {
+    if (seat.status === "MAINTENANCE") {
       return res.status(400).json({
-        message: "Seat is not available",
-      });
-    }
-    const existingBooking = await Booking.findOne({
-      seat: seat._id,
-      library: library._id,
-      status: "ACTIVE",
-    });
-
-    if (existingBooking) {
-      return res.status(409).json({
-        message: "Seat already has an active booking",
+        message: "Seat is currently under maintenance",
       });
     }
 
-
-    const existingStudentBooking = await Booking.findOne({
-      student: student._id,
-      library: library._id,
-      status: "ACTIVE",
-    });
-    if (new Date(startDate) >= new Date(endDate)) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (start >= end) {
       return res.status(400).json({
         message: "End date must be after start date",
       });
@@ -90,6 +76,46 @@ export const createBooking = async (req, res) => {
     if (Number(amount) < 0) {
       return res.status(400).json({
         message: "Amount cannot be negative",
+      });
+    }
+
+    // Determine conflicting shifts
+    let conflictingShifts = [chosenShift];
+    if (chosenShift === "FULL_DAY") {
+      conflictingShifts = ["MORNING", "EVENING", "FULL_DAY", "NIGHT", "CUSTOM"];
+    } else {
+      conflictingShifts = [chosenShift, "FULL_DAY"];
+    }
+
+    // Check if seat is already booked for conflicting shifts in overlapping date range
+    const existingBooking = await Booking.findOne({
+      seat: seat._id,
+      library: library._id,
+      status: "ACTIVE",
+      shift: { $in: conflictingShifts },
+      startDate: { $lte: end },
+      endDate: { $gte: start },
+    });
+
+    if (existingBooking) {
+      return res.status(409).json({
+        message: `Seat is already booked in ${existingBooking.shift} shift for overlapping dates`,
+      });
+    }
+
+    // Check if student already has active booking in this shift during this period
+    const existingStudentBooking = await Booking.findOne({
+      student: student._id,
+      library: library._id,
+      status: "ACTIVE",
+      shift: { $in: conflictingShifts },
+      startDate: { $lte: end },
+      endDate: { $gte: start },
+    });
+
+    if (existingStudentBooking) {
+      return res.status(409).json({
+        message: "Student already has an active booking in this shift/period",
       });
     }
 
@@ -103,8 +129,9 @@ export const createBooking = async (req, res) => {
         student: student._id,
         seat: seat._id,
         library: library._id,
-        startDate,
-        endDate,
+        startDate: start,
+        endDate: end,
+        shift: chosenShift,
         amount,
         status: "ACTIVE",
       });
@@ -113,7 +140,7 @@ export const createBooking = async (req, res) => {
         session,
       });
 
-      // Update seat status
+      // Update seat status to OCCUPIED
       seat.status = "OCCUPIED";
       await seat.save({
         session,
@@ -134,7 +161,7 @@ export const createBooking = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({
-      message: error.message,
+      message: error.message || "Failed to create booking",
     });
   }
 };
@@ -362,14 +389,26 @@ export const cancelBooking = async (req, res) => {
     try {
       await session.startTransaction();
       booking.status = "CANCELLED";
-      seat.status = "AVAILABLE";
-
-      await seat.save({
-        session,
-      });
       await booking.save({
         session,
       });
+
+      if (seat) {
+        const otherActiveBookings = await Booking.countDocuments({
+          seat: seat._id,
+          _id: { $ne: booking._id },
+          status: "ACTIVE",
+          endDate: { $gte: new Date() },
+        });
+
+        if (otherActiveBookings === 0 && seat.status !== "MAINTENANCE") {
+          seat.status = "AVAILABLE";
+          await seat.save({
+            session,
+          });
+        }
+      }
+
       await session.commitTransaction();
     } catch (error) {
       await session.abortTransaction();
