@@ -35,6 +35,16 @@ export const getMyLibrary = async () => {
 };
 
 
+export const getSubscription = async () => {
+  const { data } = await api.get("/libraries/subscription");
+  return data;
+};
+
+export const upgradeSubscription = async (payload) => {
+  const { data } = await api.post("/libraries/subscription/upgrade", payload);
+  return data;
+};
+
 
 
  

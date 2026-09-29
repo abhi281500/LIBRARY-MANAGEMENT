@@ -8,8 +8,7 @@ import {
   bulkCreateSeats,
 } from "../../services/seat.service.js";
 import ConfirmDialog from "../../components/feedback/ConfirmDialog.jsx";
-import Button from "../../components/ui/Button.jsx";
-import Input from "../../components/ui/Input.jsx";
+
 import {
   Armchair,
   Layers,
@@ -20,9 +19,6 @@ import {
   Edit,
   Eye,
   MessageCircle,
-  Calendar,
-  User,
-  Filter,
   Grid3X3,
   List
 } from "lucide-react";
@@ -329,7 +325,7 @@ function AllSeatsPage() {
                       {seat.activeBookings[0].student.user.name}
                     </p>
                     <p className="text-[9px] text-gray-500 capitalize">
-                      {seat.activeBookings[0].shift.toLowerCase()}
+                      {seat.activeBookings[0].shift ? seat.activeBookings[0].shift.toLowerCase() : "Full day"}
                     </p>
                   </div>
                 )}

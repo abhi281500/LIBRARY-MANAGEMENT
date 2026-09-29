@@ -10,6 +10,7 @@ import BookingTrendChart from "../components/dashboard/BookingTrendChart.jsx";
 import RecentActivities from "../components/dashboard/RecentActivities.jsx";
 import RecentBookings from "../components/dashboard/RecentBookings.jsx";
 import RecentPayments from "../components/dashboard/RecentPayments.jsx";
+import ExpiringAlertsCard from "../components/dashboard/ExpiringAlertsCard.jsx";
 function DashboardPage() {
   const {
     data,
@@ -83,6 +84,13 @@ function DashboardPage() {
           <RecentPayments
             payments={data?.recentPayments}
           />
+        </div>
+
+        <div className="mt-6">
+          <ExpiringAlertsCard />
+        </div>
+        <div className="mt-6">
+          <RevenueChart />
         </div>
 
 

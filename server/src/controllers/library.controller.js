@@ -1,4 +1,5 @@
 import Library from '../models/library.models.js'
+import Seat from "../models/seat.models.js";
 
 export const createLibrary = async (req, res) => {
     try {
@@ -182,5 +183,83 @@ export const getMyLibrary = async (req, res) => {
     return res.status(500).json({
       message: "Internal Server Error",
     });
+  }
+};
+
+
+
+
+// @desc    Get current subscription plan and seat usage
+// @route   GET /api/libraries/subscription
+// @access  Private (LIBRARY_OWNER, SUPER_ADMIN)
+export const getSubscription = async (req, res) => {
+  try {
+    const library = await Library.findOne({ owner: req.user._id });
+    if (!library) {
+      return res.status(404).json({ message: "Library not found" });
+    }
+
+    const currentSeats = await Seat.countDocuments({ library: library._id });
+    const plan = library.subscription || "FREE";
+    const maxSeats = plan === "FREE" ? 30 : plan === "PRO" ? 500 : 5000;
+    const usagePercent = Math.min(100, Math.round((currentSeats / maxSeats) * 100));
+
+    return res.status(200).json({
+      message: "Subscription details retrieved successfully",
+      subscription: {
+        plan,
+        maxSeats,
+        currentSeats,
+        usagePercent,
+        isPro: plan === "PRO" || plan === "ENTERPRISE",
+        features:
+          plan === "FREE"
+            ? [
+                "Max 30 Seats",
+                "1 Library Location",
+                "Standard Booking & Shifts",
+                "Basic Manual Billing",
+              ]
+            : [
+                "Unlimited Seats (Up to 500)",
+                "Automated WhatsApp Expiry Alerts",
+                "Printable Digital Invoices with GST",
+                "Revenue & Occupancy Analytics",
+                "Priority Support",
+              ],
+      },
+    });
+  } catch (error) {
+    console.error("getSubscription error:", error);
+    return res.status(500).json({ message: error.message || "Internal Server Error" });
+  }
+};
+
+// @desc    Upgrade or change subscription plan
+// @route   POST /api/libraries/subscription/upgrade
+// @access  Private (LIBRARY_OWNER, SUPER_ADMIN)
+export const upgradeSubscription = async (req, res) => {
+  try {
+    const { plan } = req.body;
+
+    if (!["FREE", "PRO", "ENTERPRISE"].includes(plan)) {
+      return res.status(400).json({ message: "Invalid subscription plan selected" });
+    }
+
+    const library = await Library.findOne({ owner: req.user._id });
+    if (!library) {
+      return res.status(404).json({ message: "Library not found" });
+    }
+
+    library.subscription = plan;
+    await library.save();
+
+    return res.status(200).json({
+      message: `Congratulations! Your library is now on the ${plan} plan.`,
+      plan: library.subscription,
+    });
+  } catch (error) {
+    console.error("upgradeSubscription error:", error);
+    return res.status(500).json({ message: error.message || "Internal Server Error" });
   }
 };

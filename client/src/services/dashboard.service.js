@@ -48,3 +48,11 @@ export const getRecentActivities = async () => {
 
   return data;
 };
+
+// Expiring soon bookings
+export const getExpiringSoonBookings = async (days = 3) => {
+  const { data } = await api.get("/dashboard/expiring-soon", {
+    params: { days },
+  });
+  return data;
+};

@@ -1,67 +1,58 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getSubscription } from "../../services/library.service.js";
+import { Sparkles, Crown } from "lucide-react";
 
 function Topbar() {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    // Abhi sirf login page par bhej rahe hain.
-    // Tumhara actual logout logic baad mein auth context ke saath connect karenge.
-    navigate("/login");
-  };
+  const { data } = useQuery({
+    queryKey: ["subscription"],
+    queryFn: getSubscription,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const plan = data?.subscription?.plan || "FREE";
+  const isPro = plan === "PRO" || plan === "ENTERPRISE";
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
-      
-      {/* Left */}
       <div>
-        <h2 className="text-lg font-semibold text-gray-800">
-          Library Management
-        </h2>
-
-        <p className="text-xs text-gray-500">
-          Manage your library efficiently
-        </p>
+        <h2 className="text-lg font-semibold text-gray-800">Library Management</h2>
+        <p className="text-xs text-gray-500">Manage your study library efficiently</p>
       </div>
 
-      {/* Right */}
-      <div className="flex items-center gap-4">
-        
-        {/* Notification */}
-        <button
-          type="button"
-          className="relative rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+      <div className="flex items-center gap-3 sm:gap-4">
+        {/* Subscription Plan Badge */}
+        <Link
+          to="/subscription"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm ${
+            isPro
+              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/20"
+              : "bg-amber-100 text-amber-900 hover:bg-amber-200"
+          }`}
         >
-          🔔
-          
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-        </button>
+          {isPro ? (
+            <>
+              <Crown className="w-3.5 h-3.5 text-amber-300" />
+              <span>{plan} PLAN</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>FREE • Upgrade</span>
+            </>
+          )}
+        </Link>
 
-        {/* Profile */}
-        <div className="flex items-center gap-3 border-l border-gray-200 pl-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 font-semibold text-white">
-            O
-          </div>
-
-          <div className="hidden sm:block">
-            <p className="text-sm font-semibold text-gray-800">
-              Library Owner
-            </p>
-
-            <p className="text-xs text-gray-500">
-              Owner
-            </p>
-          </div>
-        </div>
-
-        {/* Logout */}
+        {/* Profile & Logout */}
         <button
           type="button"
-          onClick={handleLogout}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+          onClick={() => navigate("/login")}
+          className="rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
         >
           Logout
         </button>
-
       </div>
     </header>
   );

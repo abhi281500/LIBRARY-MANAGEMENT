@@ -85,7 +85,7 @@ async function seedData() {
       { name: "Deepak Saini", email: "deepak.s@gmail.com", phone: "+919812300009" },
       { name: "Divya Nair", email: "divya.n@gmail.com", phone: "+919812300010" },
       { name: "Mohit Joshi", email: "mohit.j@gmail.com", phone: "+919812300011" },
-      { name: "Kritika Roy", email: "kritika.r@gmail.com", phone: "+919812300012" },
+      { name: "lawade ", email: "kritika.r@gmail.com", phone: "+918103334197" },
     ];
 
     const createdStudents = [];
