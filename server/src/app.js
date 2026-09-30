@@ -8,6 +8,7 @@ import bookingRoutes from "./routes/booking.routes.js"
 import studentRoutes from "./routes/student.routes.js"
 import dashboardRoutes from "./routes/dashboard.routes.js"
 import paymentRoutes  from "./routes/payment.routes.js"
+import expenseRoutes from "./routes/expense.routes.js";
 
 const app = express();
 app.use(cors({
@@ -25,6 +26,7 @@ app.use("/api/libraries",libraryRoutes)
 app.use("/api/dashboard",dashboardRoutes)
 app.use("/api/bookings",bookingRoutes)
 app.use("/api/payments",paymentRoutes)
+app.use("/api/expenses", expenseRoutes);
 
 
 export default app;

@@ -39,6 +39,9 @@ import PaymentDetailsPage from "../pages/Payment/PaymentDetailsPage.jsx";
 import PaymentPage from "../pages/Payment/PaymentPage.jsx";
 import EditPaymentPage from "../pages/Payment/EditPaymentPage.jsx";
 
+import ExpensesPage from "../pages/Expense/ExpensesPage.jsx";
+import SubscriptionPage from "../pages/Subscription/SubscriptionPage.jsx";
+import WhatsAppTemplatesPage from "../pages/Settings/WhatsAppTemplatesPage.jsx";
 
 import DashboardLayout from "../layouts/DashboardLayout.jsx";
 function AppRoutes() {
@@ -180,6 +183,24 @@ function AppRoutes() {
     <Route
       path="/payments/:id/edit"
       element={<EditPaymentPage />}
+    />
+
+    {/* Expenses & P&L Tracker */}
+    <Route
+      path="/expenses"
+      element={<ExpensesPage />}
+    />
+
+    {/* SaaS Subscription & Quotas */}
+    <Route
+      path="/subscription"
+      element={<SubscriptionPage />}
+    />
+
+    {/* WhatsApp Reminders & Templates */}
+    <Route
+      path="/settings/whatsapp"
+      element={<WhatsAppTemplatesPage />}
     />
 
   </Route>

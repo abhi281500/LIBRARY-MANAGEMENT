@@ -1,6 +1,8 @@
 import Student from "../models/student.models.js";
 import User from "../models/user.models.js";
 import Library from "../models/library.models.js";
+import Booking from "../models/booking.models.js";
+import Payment from "../models/payment.models.js";
 import ApiFeatures from "../utils/apifeatures.js";
 import mongoose from "mongoose";
 
@@ -156,7 +158,7 @@ export const getStudentById = async (req, res) => {
     }
     const student = await Student.findOne({ _id: id, library: library._id })
       .populate("user", "name email phone")
-      .populate("library", "name address");
+      .populate("library", "name address phone openTime closeTime");
 
     if (!student) {
       return res.status(404).json({
@@ -164,9 +166,26 @@ export const getStudentById = async (req, res) => {
       });
     }
 
+    const bookings = await Booking.find({
+      student: student._id,
+      library: library._id,
+    })
+      .populate("seat", "seatNumber floor type")
+      .sort({ createdAt: -1 });
+
+    const activeBooking = bookings.find((b) => b.status === "ACTIVE") || null;
+
+    const payments = await Payment.find({
+      student: student._id,
+      library: library._id,
+    }).sort({ paymentDate: -1, createdAt: -1 });
+
     return res.status(200).json({
       message: "Student retrieved successfully",
       student,
+      activeBooking,
+      bookings,
+      payments,
     });
   } catch (error) {
     console.error(error);

@@ -263,3 +263,62 @@ export const upgradeSubscription = async (req, res) => {
     return res.status(500).json({ message: error.message || "Internal Server Error" });
   }
 };
+
+// @desc    Get WhatsApp message templates and UPI settings
+// @route   GET /api/libraries/whatsapp-templates
+// @access  Private (LIBRARY_OWNER, SUPER_ADMIN)
+export const getWhatsAppTemplates = async (req, res) => {
+  try {
+    const library = await Library.findOne({ owner: req.user._id });
+    if (!library) {
+      return res.status(404).json({ message: "Library not found" });
+    }
+
+    return res.status(200).json({
+      message: "WhatsApp templates fetched successfully",
+      templates: library.whatsappTemplates || {},
+      upiId: library.upiId || "",
+      libraryPhone: library.phone || "",
+      libraryName: library.name || "",
+    });
+  } catch (error) {
+    console.error("getWhatsAppTemplates error:", error);
+    return res.status(500).json({ message: error.message || "Internal Server Error" });
+  }
+};
+
+// @desc    Update WhatsApp message templates and UPI settings
+// @route   PUT /api/libraries/whatsapp-templates
+// @access  Private (LIBRARY_OWNER, SUPER_ADMIN)
+export const updateWhatsAppTemplates = async (req, res) => {
+  try {
+    const { templates, upiId } = req.body;
+
+    const library = await Library.findOne({ owner: req.user._id });
+    if (!library) {
+      return res.status(404).json({ message: "Library not found" });
+    }
+
+    if (upiId !== undefined) {
+      library.upiId = upiId.trim();
+    }
+
+    if (templates) {
+      library.whatsappTemplates = {
+        ...library.whatsappTemplates,
+        ...templates,
+      };
+    }
+
+    await library.save();
+
+    return res.status(200).json({
+      message: "WhatsApp templates saved successfully",
+      templates: library.whatsappTemplates,
+      upiId: library.upiId,
+    });
+  } catch (error) {
+    console.error("updateWhatsAppTemplates error:", error);
+    return res.status(500).json({ message: error.message || "Internal Server Error" });
+  }
+};

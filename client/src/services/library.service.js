@@ -45,6 +45,16 @@ export const upgradeSubscription = async (payload) => {
   return data;
 };
 
+export const getWhatsAppTemplates = async () => {
+  const { data } = await api.get("/libraries/whatsapp-templates");
+  return data;
+};
+
+export const updateWhatsAppTemplates = async (payload) => {
+  const { data } = await api.put("/libraries/whatsapp-templates", payload);
+  return data;
+};
+
 
 
  

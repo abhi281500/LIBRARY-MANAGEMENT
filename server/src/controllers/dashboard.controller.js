@@ -2,6 +2,7 @@ import Student from "../models/student.models.js";
 import Seat from "../models/seat.models.js";
 import Booking from "../models/booking.models.js";
 import Payment from "../models/payment.models.js";
+import Expense from "../models/expense.models.js";
 import Library from "../models/library.models.js";
 
 import { getExpiringBookings, processExpiredBookings } from "../services/expiry.service.js";
@@ -176,6 +177,33 @@ export const getDashboard = async (req, res) => {
                 ? todayRevenueResult[0].revenue
                 : 0;
 
+        const totalExpensesResult = await Expense.aggregate([
+            {
+                $match: {
+                    library: library._id,
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    expenses: {
+                        $sum: "$amount",
+                    },
+                },
+            },
+        ]);
+
+        const totalExpenses =
+            totalExpensesResult.length > 0
+                ? totalExpensesResult[0].expenses
+                : 0;
+
+        const netProfit = totalRevenue - totalExpenses;
+        const profitMargin =
+            totalRevenue > 0
+                ? Number(((netProfit / totalRevenue) * 100).toFixed(1))
+                : 0;
+
         const occupancyRate =
             totalSeats === 0
                 ? 0
@@ -206,6 +234,12 @@ export const getDashboard = async (req, res) => {
                 totalRevenue,
 
                 todayRevenue,
+
+                totalExpenses,
+
+                netProfit,
+
+                profitMargin,
 
                 refundedPayments
 
