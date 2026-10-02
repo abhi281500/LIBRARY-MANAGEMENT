@@ -81,7 +81,7 @@ function RecentActivities() {
                 </p>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  {activity.student?.name ||
+                  {activity.student?.user.name ||
                     activity.student?.fullName ||
                     "Unknown student"}
                 </p>

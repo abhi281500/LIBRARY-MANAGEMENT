@@ -3,7 +3,7 @@ import Booking from "../models/booking.models.js";
 import Library from "../models/library.models.js";
 import Seat from "../models/seat.models.js";
 import mongoose from "mongoose";
-import ApiFeatures from "../utils/apifeatures.js";
+import ApiFeatures from "../utils/apiFeatures.js";
 
 
 export const createPayment = async (req, res) => {
@@ -129,9 +129,10 @@ export const getAllPayments = async (req, res) => {
         })
         .populate({
           path: "booking",
+          select: "shift startDate endDate amount status",
           populate: {
             path: "seat",
-            select: "seatNumber",
+            select: "seatNumber floor type",
           },
         }),
       req.query,

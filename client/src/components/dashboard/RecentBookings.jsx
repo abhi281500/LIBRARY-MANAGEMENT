@@ -31,7 +31,7 @@ function RecentBookings({ bookings = [] }) {
 
               <div>
                 <p className="font-medium text-gray-900">
-                  {booking.student?.name || "Unknown Student"}
+                  {booking.student?.user?.name || "Unknown Student"}
                 </p>
 
                 <p className="mt-1 text-sm text-gray-500">
@@ -42,11 +42,10 @@ function RecentBookings({ bookings = [] }) {
               <div className="text-right">
 
                 <span
-                  className={`rounded-full px-3 py-1 text-xs font-medium ${
-                    booking.status === "ACTIVE"
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${booking.status === "ACTIVE"
                       ? "bg-green-100 text-green-700"
                       : "bg-red-100 text-red-700"
-                  }`}
+                    }`}
                 >
                   {booking.status}
                 </span>

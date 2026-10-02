@@ -1,0 +1,20 @@
+{
+  "name": "StudySpace - Library Operating System",
+  "short_name": "StudySpace",
+  "description": "Enterprise Study Library Management OS: Multi-shift desk matrix, QR live attendance, fee billing, and P&L analytics.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "categories": ["business", "productivity", "education"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

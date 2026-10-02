@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  # MongoDB Database Service
+  mongodb:
+    image: mongo:6.0
+    container_name: studyos-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: library_management
+    networks:
+      - studyos-net
+
+  # Backend Express API Service
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: studyos-api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/library_management
+      - JWT_SECRET_KEY=studyos_production_super_secret_jwt_key_2026
+      - CLIENT_URL=http://localhost
+    depends_on:
+      - mongodb
+    networks:
+      - studyos-net
+
+  # Frontend Nginx React PWA Service
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: studyos-client
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    networks:
+      - studyos-net
+
+volumes:
+  mongo_data:
+    driver: local
+
+networks:
+  studyos-net:
+    driver: bridge

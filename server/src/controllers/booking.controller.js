@@ -3,7 +3,7 @@ import Student from "../models/student.models.js";
 import Seat from "../models/seat.models.js";
 import Library from "../models/library.models.js";
 import mongoose from "mongoose";
-import ApiFeatures from "../utils/apifeatures.js";
+import ApiFeatures from "../utils/apiFeatures.js";
 
 export const createBooking = async (req, res) => {
   try {
@@ -195,11 +195,11 @@ export const getAllBookings = async (req, res) => {
         })
         .populate({
           path: "seat",
-          select: "seatNumber status",
+          select: "seatNumber floor type status",
         }),
       req.query,
     )
-      .search(["status"])
+      .search(["status", "shift"])
       .filter()
       .sort()
       .paginate();

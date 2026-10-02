@@ -42,6 +42,9 @@ import EditPaymentPage from "../pages/Payment/EditPaymentPage.jsx";
 import ExpensesPage from "../pages/Expense/ExpensesPage.jsx";
 import SubscriptionPage from "../pages/Subscription/SubscriptionPage.jsx";
 import WhatsAppTemplatesPage from "../pages/Settings/WhatsAppTemplatesPage.jsx";
+import AttendancePage from "../pages/Attendance/AttendancePage.jsx";
+import SuperAdminDashboard from "../pages/SuperAdmin/SuperAdminDashboard.jsx";
+import StudentPortalPage from "../pages/Portal/StudentPortalPage.jsx";
 
 import DashboardLayout from "../layouts/DashboardLayout.jsx";
 function AppRoutes() {
@@ -52,6 +55,12 @@ function AppRoutes() {
       <Route
         path="/"
         element={<Navigate to="/login" replace />}
+      />
+
+      {/* Student Self-Service Portal (Public Access) */}
+      <Route
+        path="/portal"
+        element={<StudentPortalPage />}
       />
 
       {/* Public Routes */}
@@ -68,8 +77,7 @@ function AppRoutes() {
       </Route>
 
       {/* Protected Routes */}
-      {/* Protected Routes */}
-<Route element={<ProtectedRoute />}>
+      <Route element={<ProtectedRoute />}>
   
   {/* Dashboard Layout */}
   <Route element={<DashboardLayout />}>
@@ -201,6 +209,18 @@ function AppRoutes() {
     <Route
       path="/settings/whatsapp"
       element={<WhatsAppTemplatesPage />}
+    />
+
+    {/* Live Attendance & QR Check-In */}
+    <Route
+      path="/attendance"
+      element={<AttendancePage />}
+    />
+
+    {/* 👑 Super Admin Platform Command Center */}
+    <Route
+      path="/super-admin"
+      element={<SuperAdminDashboard />}
     />
 
   </Route>

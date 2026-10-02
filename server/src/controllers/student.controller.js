@@ -3,7 +3,7 @@ import User from "../models/user.models.js";
 import Library from "../models/library.models.js";
 import Booking from "../models/booking.models.js";
 import Payment from "../models/payment.models.js";
-import ApiFeatures from "../utils/apifeatures.js";
+import ApiFeatures from "../utils/apiFeatures.js";
 import mongoose from "mongoose";
 
 export const createStudent = async (req, res) => {
@@ -92,58 +92,159 @@ export const createStudent = async (req, res) => {
   }
 };
 
+
 export const getAllStudents = async (req, res) => {
   try {
+    // --------------------------------------------------
+    // 1. Find library of logged-in owner
+    // --------------------------------------------------
     const library = await Library.findOne({
       owner: req.user._id,
     });
+
     if (!library) {
       return res.status(404).json({
+        success: false,
         message: "Library not found for this owner",
       });
     }
 
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    // --------------------------------------------------
+    // 2. Pagination
+    // --------------------------------------------------
+    const page = Math.max(Number(req.query.page) || 1, 1);
 
-    const totalStudents = await Student.countDocuments({
+    const limit = Math.min(
+      Math.max(Number(req.query.limit) || 10, 1),
+      100
+    );
+
+    const skip = (page - 1) * limit;
+
+    // --------------------------------------------------
+    // 3. Query params
+    // --------------------------------------------------
+    const search = req.query.search?.trim() || "";
+    const status = req.query.status?.trim() || "ALL";
+
+    const sortBy = req.query.sortBy || "createdAt";
+    const sortOrder = req.query.sortOrder === "asc" ? 1 : -1;
+
+    // --------------------------------------------------
+    // 4. Build Student filter
+    // --------------------------------------------------
+    const studentFilter = {
       library: library._id,
-    });
+    };
 
-    const features = new ApiFeatures(
-      Student.find({
-        library: library._id,
+    // --------------------------------------------------
+    // 5. Status filter
+    // --------------------------------------------------
+    if (status !== "ALL") {
+      studentFilter.status = status;
+    }
+
+    // --------------------------------------------------
+    // 6. Search
+    //
+    // Search:
+    // - Admission Number
+    // - Student Name
+    // - Email
+    // - Phone
+    // --------------------------------------------------
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+
+      const matchingUsers = await User.find({
+        $or: [
+          { name: searchRegex },
+          { email: searchRegex },
+          { phone: searchRegex },
+        ],
+      }).select("_id");
+
+      const userIds = matchingUsers.map((user) => user._id);
+
+      studentFilter.$or = [
+        {
+          admissionNumber: searchRegex,
+        },
+        {
+          user: {
+            $in: userIds,
+          },
+        },
+      ];
+    }
+
+    // --------------------------------------------------
+    // 7. Count filtered students
+    // --------------------------------------------------
+    const totalStudents = await Student.countDocuments(
+      studentFilter
+    );
+
+    const totalPages = Math.ceil(totalStudents / limit);
+
+    // --------------------------------------------------
+    // 8. Prevent page from going beyond available pages
+    // --------------------------------------------------
+    const safePage =
+      totalPages > 0
+        ? Math.min(page, totalPages)
+        : 1;
+
+    const safeSkip = (safePage - 1) * limit;
+
+    // --------------------------------------------------
+    // 9. Fetch students
+    // --------------------------------------------------
+    const students = await Student.find(studentFilter)
+      .populate("user", "name email phone")
+      .populate("library", "name address")
+      .sort({
+        [sortBy]: sortOrder,
       })
-        .populate("user", "name email phone")
-        .populate("library", "name address"),
-      req.query,
-    )
-      .search(["admissionNumber", "status"])
-      .filter()
-      .sort()
-      .paginate();
+      .skip(safeSkip)
+      .limit(limit)
+      .lean();
 
-    const students = await features.query;
-
+    // --------------------------------------------------
+    // 10. Response
+    // --------------------------------------------------
     return res.status(200).json({
+      success: true,
       message: "Students retrieved successfully",
 
       pagination: {
-        page,
+        page: safePage,
         limit,
         totalStudents,
-        totalPages: Math.ceil(totalStudents / limit),
+        totalPages,
+        hasNextPage: safePage < totalPages,
+        hasPrevPage: safePage > 1,
+      },
+
+      filters: {
+        search,
+        status,
+        sortBy,
+        sortOrder: sortOrder === 1 ? "asc" : "desc",
       },
 
       students,
     });
   } catch (error) {
-    console.error(error);
+    console.error("getAllStudents error:", error);
+
     return res.status(500).json({
-      message: error.message,
+      success: false,
+      message: error.message || "Failed to retrieve students",
     });
   }
 };
+
 
 export const getStudentById = async (req, res) => {
   try {

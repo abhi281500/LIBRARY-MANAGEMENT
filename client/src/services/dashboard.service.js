@@ -45,7 +45,6 @@ export const getBookingTrends = async (year) => {
 // Recent activities
 export const getRecentActivities = async () => {
   const { data } = await api.get("/dashboard/activities");
-
   return data;
 };
 

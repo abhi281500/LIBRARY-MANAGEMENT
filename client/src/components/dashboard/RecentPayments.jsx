@@ -32,18 +32,14 @@ function RecentPayments({ payments = [] }) {
               {/* Payment information */}
               <div>
                 <p className="font-medium text-gray-900">
-                  {payment.student?.name || "Unknown Student"}
+                  {payment.student?.user.name || "Unknown Student"}
                 </p>
 
                 <p className="mt-1 text-sm text-gray-500">
                   {payment.paymentMethod || "N/A"}
                 </p>
 
-                <p className="mt-1 text-xs text-gray-400">
-                  {payment.booking
-                    ? `Booking: ${payment.booking._id}`
-                    : "Booking: N/A"}
-                </p>
+                
               </div>
 
               {/* Amount + status */}

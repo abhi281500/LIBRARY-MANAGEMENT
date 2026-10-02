@@ -2,7 +2,7 @@ import Seat from "../models/seat.models.js";
 import Booking from "../models/booking.models.js";
 import Library from "../models/library.models.js";
 import mongoose from "mongoose";
-import ApiFeatures from "../utils/apifeatures.js";
+import ApiFeatures from "../utils/apiFeatures.js";
 
 
 

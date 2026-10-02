@@ -51,23 +51,35 @@ export const processExpiredBookings = async () => {
   }
 };
 
+
 /**
- * Get all active bookings expiring within N days for a specific library.
+ * Get expired + currently expiring bookings
+ * for a specific library.
  */
 export const getExpiringBookings = async (libraryId, days = 3) => {
   try {
     const now = new Date();
+
     const threshold = new Date();
     threshold.setDate(threshold.getDate() + days);
 
     const expiring = await Booking.find({
       library: libraryId,
-      status: "ACTIVE",
-      endDate: { $gte: now, $lte: threshold },
+
+      // Cancelled bookings ko dashboard par nahi dikhana
+      status: { $ne: "CANCELLED" },
+
+      // Past expired + today + next N days
+      endDate: {
+        $lte: threshold,
+      },
     })
       .populate({
         path: "student",
-        populate: { path: "user", select: "name email phone" },
+        populate: {
+          path: "user",
+          select: "name email phone",
+        },
       })
       .populate("seat", "seatNumber floor type")
       .sort({ endDate: 1 });
