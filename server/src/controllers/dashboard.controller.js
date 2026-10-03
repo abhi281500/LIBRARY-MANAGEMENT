@@ -49,8 +49,27 @@ export const getDashboard = async (req, res) => {
         });
 
         if (!library) {
-            return res.status(404).json({
-                message: "Library not found"
+            return res.status(200).json({
+                message: "Welcome to StudySpace OS! Please create your first library.",
+                needsLibrarySetup: true,
+                statistics: {
+                    totalStudents: 0,
+                    totalSeats: 0,
+                    occupiedSeats: 0,
+                    availableSeats: 0,
+                    maintenanceSeats: 0,
+                    occupancyRate: 0,
+                    activeBookings: 0,
+                    cancelledBookings: 0,
+                    totalRevenue: 0,
+                    todayRevenue: 0,
+                    totalExpenses: 0,
+                    netProfit: 0,
+                    profitMargin: 0,
+                    refundedPayments: 0,
+                },
+                recentBookings: [],
+                recentPayments: [],
             });
         }
 

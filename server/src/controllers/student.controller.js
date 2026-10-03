@@ -429,4 +429,134 @@ export const deleteStudent = async (req, res) => {
   }
 };
 
+/**
+ * BULK IMPORT STUDENTS (From CSV / Excel data array)
+ */
+export const bulkImportStudents = async (req, res) => {
+  try {
+    const { students: rawStudents } = req.body;
+
+    if (!Array.isArray(rawStudents) || rawStudents.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid list of students to import.",
+      });
+    }
+
+    const library = await Library.findOne({ owner: req.user._id });
+    if (!library) {
+      return res.status(404).json({
+        success: false,
+        message: "Library not found for this account",
+      });
+    }
+
+    let successCount = 0;
+    let skippedCount = 0;
+    const errorDetails = [];
+    const createdStudents = [];
+
+    for (let i = 0; i < rawStudents.length; i++) {
+      const row = rawStudents[i];
+      const name = row.name?.trim();
+      let phone = row.phone?.toString()?.trim() || "";
+      let admissionNumber = row.admissionNumber?.toString()?.trim();
+      let email = row.email?.toString()?.trim()?.toLowerCase();
+      const status = ["ACTIVE", "INACTIVE"].includes(row.status?.toUpperCase())
+        ? row.status.toUpperCase()
+        : "ACTIVE";
+      const joiningDate = row.joiningDate ? new Date(row.joiningDate) : new Date();
+
+      if (!name) {
+        skippedCount++;
+        errorDetails.push({ row: i + 1, reason: "Student name is required" });
+        continue;
+      }
+
+      if (!admissionNumber) {
+        admissionNumber = `ADM-${Math.floor(1000 + Math.random() * 9000)}`;
+      }
+
+      if (!phone) {
+        phone = "9" + Math.floor(100000000 + Math.random() * 900000000);
+      }
+
+      if (!email) {
+        const cleanLib = library.name.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "lib";
+        const cleanAdm = admissionNumber.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+        email = `${cleanAdm}@${cleanLib}.studyspace.local`;
+      }
+
+      // Duplicate Admission Check in this library
+      const existingStudent = await Student.findOne({
+        library: library._id,
+        admissionNumber,
+      });
+
+      if (existingStudent) {
+        skippedCount++;
+        errorDetails.push({
+          row: i + 1,
+          name,
+          admissionNumber,
+          reason: `Admission #${admissionNumber} already registered`,
+        });
+        continue;
+      }
+
+      // Check unique email across system
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        email = `${admissionNumber.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()}_${Date.now()}@studyspace.local`;
+      }
+
+      try {
+        const defaultPassword = row.password || phone.slice(-4) || "Study@1234";
+        const newUser = await User.create({
+          name,
+          email,
+          password: defaultPassword,
+          phone,
+          role: "STUDENT",
+        });
+
+        const newStudent = await Student.create({
+          user: newUser._id,
+          library: library._id,
+          admissionNumber,
+          joiningDate: isNaN(joiningDate.getTime()) ? new Date() : joiningDate,
+          status,
+        });
+
+        successCount++;
+        createdStudents.push(newStudent);
+      } catch (err) {
+        skippedCount++;
+        errorDetails.push({
+          row: i + 1,
+          name,
+          admissionNumber,
+          reason: err.message || "Failed to create student record",
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Imported ${successCount} student(s) successfully.${skippedCount > 0 ? ` (${skippedCount} skipped)` : ""}`,
+      successCount,
+      skippedCount,
+      errorDetails,
+      totalProcessed: rawStudents.length,
+    });
+  } catch (error) {
+    console.error("bulkImportStudents error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to process bulk import",
+    });
+  }
+};
+
+
 

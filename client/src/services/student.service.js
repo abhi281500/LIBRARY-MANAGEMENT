@@ -5,6 +5,11 @@ export const createStudent = async (payload) => {
     const { data } = await api.post("/students", payload);
     return data;
 }
+
+export const bulkImportStudents = async (students) => {
+    const { data } = await api.post("/students/bulk-import", { students });
+    return data;
+}
 export const getAllStudents = async ({
   page = 1,
   limit = 10,

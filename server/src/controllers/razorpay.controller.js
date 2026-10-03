@@ -288,14 +288,37 @@ export const handleRazorpayWebhook = async (req, res) => {
     console.log(`[Razorpay Webhook Received]: ${event}`);
 
     if (event === "payment.captured" || event === "order.paid") {
-      const paymentEntity = req.body.payload.payment.entity;
+      const paymentEntity = req.body.payload?.payment?.entity || {};
       const notes = paymentEntity.notes || {};
 
+      // 1. SaaS Plan Subscription Auto-Upgrade
       if (notes.plan && notes.libraryId) {
         await Library.findByIdAndUpdate(notes.libraryId, {
           subscription: notes.plan,
         });
         console.log(`[Webhook Auto-Upgrade]: Library ${notes.libraryId} upgraded to ${notes.plan}`);
+      }
+
+      // 2. Student Fee Payment Auto-Activation
+      if (notes.bookingId) {
+        const booking = await Booking.findById(notes.bookingId);
+        if (booking && booking.status !== "ACTIVE") {
+          booking.status = "ACTIVE";
+          await booking.save();
+
+          const receiptNumber = `REC-WH-${Date.now()}`;
+          await Payment.create({
+            booking: booking._id,
+            student: booking.student,
+            library: booking.library,
+            amount: paymentEntity.amount ? paymentEntity.amount / 100 : booking.amount,
+            paymentMethod: paymentEntity.method || "ONLINE",
+            paymentStatus: "PAID",
+            paymentDate: new Date(),
+            receiptNumber,
+          });
+          console.log(`[Webhook Student Fee]: Booking ${notes.bookingId} activated via webhook`);
+        }
       }
     }
 

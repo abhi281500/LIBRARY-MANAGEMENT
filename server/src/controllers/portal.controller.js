@@ -10,13 +10,14 @@ import Attendance from "../models/attendance.models.js";
  */
 export const studentPortalLookup = async (req, res) => {
   try {
-    const { identifier } = req.body;
+    const { identifier, pin } = req.body;
 
     if (!identifier) {
-      return res.status(400).json({ message: "Please enter your Phone Number or Admission Number" });
+      return res.status(400).json({ message: "Please enter your Phone Number, Admission Number, or Desk #" });
     }
 
     const cleanIdentifier = identifier.trim();
+    let student = null;
 
     // 1. Check by phone
     const cleanPhone = cleanIdentifier.replace(/[^0-9]/g, "");
@@ -89,6 +90,17 @@ export const studentPortalLookup = async (req, res) => {
       return res.status(404).json({
         message: "No student membership found with this Phone Number, Admission ID, or Desk #.",
       });
+    }
+
+    // Optional Security PIN verification (Default PIN: last 4 digits of student phone)
+    if (pin && pin.trim().length > 0) {
+      const studentPhone = student.user?.phone?.replace(/[^0-9]/g, "") || "";
+      const expectedPin = studentPhone.slice(-4) || "1234";
+      if (pin.trim() !== expectedPin) {
+        return res.status(401).json({
+          message: "Incorrect security PIN. (Default PIN is the last 4 digits of your registered mobile number)",
+        });
+      }
     }
 
     // 2. Fetch Active & Past Bookings

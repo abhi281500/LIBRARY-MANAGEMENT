@@ -6,20 +6,26 @@ import { processExpiredBookings } from "./src/services/expiry.service.js";
 
 const PORT = process.env.PORT || 8000;
 
-connectDB().then(() => {
-  // Initial check on server start
-  processExpiredBookings().catch((err) =>
-    console.error("[Expiry Worker Startup Error]:", err)
-  );
-
-  // Periodic check every 1 hour
-  setInterval(() => {
+connectDB()
+  .then(() => {
+    // Initial check on server start
     processExpiredBookings().catch((err) =>
-      console.error("[Expiry Worker Interval Error]:", err)
+      console.error("[Expiry Worker Startup Error]:", err)
     );
-  }, 60 * 60 * 1000);
-});
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+    // Periodic check every 1 hour
+    setInterval(() => {
+      processExpiredBookings().catch((err) =>
+        console.error("[Expiry Worker Interval Error]:", err)
+      );
+    }, 60 * 60 * 1000);
+
+    // Start Express server after DB connects
+    app.listen(PORT, () => {
+      console.log(`🚀 StudySpace OS Server is running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ Failed to connect to MongoDB:", err);
+    process.exit(1);
+  });

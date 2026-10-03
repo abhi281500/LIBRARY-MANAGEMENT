@@ -15,10 +15,12 @@ import {
   Sparkles,
   Armchair,
   X,
+  Lock,
 } from "lucide-react";
 
 export default function StudentPortalPage() {
   const [identifier, setIdentifier] = useState("");
+  const [pin, setPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
@@ -30,20 +32,20 @@ export default function StudentPortalPage() {
   const handleSearch = async (e) => {
     if (e) e.preventDefault();
     if (!identifier.trim()) {
-      setError("Please enter your registered phone number or admission ID");
+      setError("Please enter your registered phone number, admission ID, or desk number");
       return;
     }
 
     setLoading(true);
     setError("");
     try {
-      const res = await studentPortalLookup(identifier.trim());
+      const res = await studentPortalLookup(identifier.trim(), pin.trim());
       setData(res);
     } catch (err) {
       console.error(err);
       setError(
         err.response?.data?.message ||
-          "Student record not found. Please verify your phone number or admission ID."
+          "Student record not found. Please verify your phone number, admission ID, or PIN."
       );
     } finally {
       setLoading(false);
@@ -135,6 +137,26 @@ export default function StudentPortalPage() {
                       placeholder="e.g. 9876543210, ADM-102, or Seat 14"
                       className="w-full pl-11 pr-4 py-3.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm font-medium transition"
                       autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                      Security PIN (Optional)
+                    </label>
+                    <span className="text-[10px] text-slate-400">Default: Last 4 digits of phone</span>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input
+                      type="password"
+                      maxLength={6}
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value)}
+                      placeholder="e.g. 3210"
+                      className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm font-medium transition"
                     />
                   </div>
                 </div>

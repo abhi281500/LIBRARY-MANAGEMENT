@@ -1,13 +1,30 @@
 import express from "express";
-import { createStudent, getAllStudents, getStudentById, updateStudent, deleteStudent } from "../controllers/student.controller.js";
-import auth from "../middlewares/auth.middlewares.js"
-import roleMiddleware from "../middlewares/role.middlewares.js"
+import {
+  createStudent,
+  getAllStudents,
+  getStudentById,
+  updateStudent,
+  deleteStudent,
+  bulkImportStudents,
+} from "../controllers/student.controller.js";
+import auth from "../middlewares/auth.middlewares.js";
+import roleMiddleware from "../middlewares/role.middlewares.js";
+
 const router = express.Router();
 
-router.post("/",
-    auth,
-    roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
-     createStudent);    
+router.post(
+  "/bulk-import",
+  auth,
+  roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
+  bulkImportStudents
+);
+
+router.post(
+  "/",
+  auth,
+  roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
+  createStudent
+);    
 
 
 router.get("/",auth,

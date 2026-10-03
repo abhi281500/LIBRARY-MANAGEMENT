@@ -15,28 +15,31 @@ import roleMiddleware from "../middlewares/role.middlewares.js";
 
 const router = express.Router();
 
+// Allow both LIBRARY_OWNER and SUPER_ADMIN on all dashboard routes
+router.use(verifyJWT, roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"));
+
 // Main Dashboard
-router.get("/", verifyJWT, roleMiddleware("LIBRARY_OWNER"), getDashboard);
+router.get("/", getDashboard);
 
 // Expiring Soon Bookings (Alerts)
-router.get("/expiring-soon", verifyJWT, roleMiddleware("LIBRARY_OWNER"), getExpiringSoonBookings);
+router.get("/expiring-soon", getExpiringSoonBookings);
 
 // Trigger Expiry Background Job
-router.post("/trigger-expiry", verifyJWT, roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"), triggerExpiryCheck);
+router.post("/trigger-expiry", triggerExpiryCheck);
 
 // Monthly Revenue
-router.get("/revenue/monthly", verifyJWT, roleMiddleware("LIBRARY_OWNER"), getMonthlyRevenue);
+router.get("/revenue/monthly", getMonthlyRevenue);
 
 // Yearly Revenue
-router.get("/revenue/yearly", verifyJWT, roleMiddleware("LIBRARY_OWNER"), getYearlyRevenue);
+router.get("/revenue/yearly", getYearlyRevenue);
 
 // Seat Occupancy
-router.get("/occupancy", verifyJWT, roleMiddleware("LIBRARY_OWNER"), getSeatOccupancy);
+router.get("/occupancy", getSeatOccupancy);
 
 // Booking Trends
-router.get("/bookings/trends", verifyJWT, roleMiddleware("LIBRARY_OWNER"), getBookingTrends);
+router.get("/bookings/trends", getBookingTrends);
 
 // Recent Activities
-router.get("/activities", verifyJWT, roleMiddleware("LIBRARY_OWNER"), getRecentActivities);
+router.get("/activities", getRecentActivities);
 
 export default router;

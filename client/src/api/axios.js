@@ -28,9 +28,12 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       storage.removeToken();
-
-      // Later AuthContext logout yaha call karenge
-      // window.location.href = "/login";
+      // Only redirect if not on public portal or auth pages
+      const publicPaths = ["/login", "/register", "/portal"];
+      const isPublic = publicPaths.some((path) => window.location.pathname.startsWith(path));
+      if (!isPublic && window.location.pathname !== "/") {
+        window.location.href = "/login";
+      }
     }
 
     return Promise.reject(error);
