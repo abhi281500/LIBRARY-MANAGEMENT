@@ -18,22 +18,22 @@ export const studentPortalLookup = async (req, res) => {
 
     const cleanIdentifier = identifier.trim();
 
-    // 1. Find user by phone, or student by admissionNumber
-    let student = null;
+    // 1. Check by phone
+    const cleanPhone = cleanIdentifier.replace(/[^0-9]/g, "");
+    if (cleanPhone.length >= 7) {
+      const user = await User.findOne({
+        phone: { $regex: new RegExp(cleanPhone, "i") },
+        role: "STUDENT",
+      });
 
-    // Check by phone
-    const user = await User.findOne({
-      phone: { $regex: new RegExp(`^${cleanIdentifier.replace(/[^0-9]/g, "")}$`, "i") },
-      role: "STUDENT",
-    });
-
-    if (user) {
-      student = await Student.findOne({ user: user._id })
-        .populate("user", "name email phone")
-        .populate("library", "name address phone upiId openTime closeTime");
+      if (user) {
+        student = await Student.findOne({ user: user._id })
+          .populate("user", "name email phone")
+          .populate("library", "name address phone upiId openTime closeTime");
+      }
     }
 
-    // If not found by phone, check by admissionNumber
+    // 2. Check by admissionNumber
     if (!student) {
       student = await Student.findOne({
         admissionNumber: { $regex: new RegExp(`^${cleanIdentifier}$`, "i") },
@@ -42,9 +42,52 @@ export const studentPortalLookup = async (req, res) => {
         .populate("library", "name address phone upiId openTime closeTime");
     }
 
+    // 3. Check by Seat Number / Desk # (e.g., "14", "Seat 14", "#14", "Desk 14")
+    if (!student) {
+      const seatNumMatch = cleanIdentifier.match(/\d+/);
+      if (seatNumMatch) {
+        const seatNum = parseInt(seatNumMatch[0], 10);
+        const matchingSeats = await (await import("../models/seat.models.js")).default.find({
+          seatNumber: seatNum,
+        });
+
+        if (matchingSeats.length > 0) {
+          const seatIds = matchingSeats.map((s) => s._id);
+          const activeBooking = await Booking.findOne({
+            seat: { $in: seatIds },
+            status: "ACTIVE",
+          }).populate({
+            path: "student",
+            populate: [
+              { path: "user", select: "name email phone" },
+              { path: "library", select: "name address phone upiId openTime closeTime" },
+            ],
+          });
+
+          if (activeBooking && activeBooking.student) {
+            student = activeBooking.student;
+          }
+        }
+      }
+    }
+
+    // 4. Check by User Name
+    if (!student && cleanIdentifier.length >= 3) {
+      const user = await User.findOne({
+        name: { $regex: new RegExp(`^${cleanIdentifier}$`, "i") },
+        role: "STUDENT",
+      });
+
+      if (user) {
+        student = await Student.findOne({ user: user._id })
+          .populate("user", "name email phone")
+          .populate("library", "name address phone upiId openTime closeTime");
+      }
+    }
+
     if (!student) {
       return res.status(404).json({
-        message: "No student membership found with this phone number or admission ID.",
+        message: "No student membership found with this Phone Number, Admission ID, or Desk #.",
       });
     }
 

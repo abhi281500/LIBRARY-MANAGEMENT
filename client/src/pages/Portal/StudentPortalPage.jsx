@@ -124,7 +124,7 @@ export default function StudentPortalPage() {
               <form onSubmit={handleSearch} className="space-y-4 relative">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                    Phone Number or Admission ID
+                    Phone Number, Admission ID, or Desk #
                   </label>
                   <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -132,7 +132,7 @@ export default function StudentPortalPage() {
                       type="text"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="e.g. 9876543210 or ADM-102"
+                      placeholder="e.g. 9876543210, ADM-102, or Seat 14"
                       className="w-full pl-11 pr-4 py-3.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm font-medium transition"
                       autoFocus
                     />

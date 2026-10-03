@@ -42,10 +42,21 @@ export default function SuperAdminDashboard() {
   const [impersonatingTenant, setImpersonatingTenant] = useState(null);
   const [showImpersonateDialog, setShowImpersonateDialog] = useState(false);
 
+  const storedUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  }, []);
+
+  const isSuperAdmin = storedUser?.role === "SUPER_ADMIN";
+
   // 1. Fetch Platform SaaS Overview Metrics
   const { data: overviewData, isLoading: isOverviewLoading, refetch: refetchOverview } = useQuery({
     queryKey: ["superadmin-overview"],
     queryFn: getPlatformOverview,
+    enabled: isSuperAdmin,
   });
 
   // 2. Fetch All Tenants
@@ -160,6 +171,51 @@ export default function SuperAdminDashboard() {
         return { label: "FREE TIER", bg: "bg-slate-100 text-slate-700 border-slate-300" };
     }
   };
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white text-center">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 space-y-5 shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
+            <Crown className="w-8 h-8" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-white">Super Admin Access Required</h2>
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              You are currently logged in as <strong>{storedUser?.name || "Library Owner"}</strong> ({storedUser?.role || "LIBRARY_OWNER"}).
+              To view platform MRR analytics, tenant plan overrides, and system commands, please log in with Super Admin credentials.
+            </p>
+          </div>
+
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-left space-y-1">
+            <p className="text-[10px] text-slate-500 font-bold uppercase">Super Admin Demo Credentials:</p>
+            <p className="text-slate-300 font-mono">Email: <span className="text-amber-400">admin@studyos.com</span></p>
+            <p className="text-slate-300 font-mono">Password: <span className="text-amber-400">AdminPassword@123</span></p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.href = "/login";
+              }}
+              className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl transition shadow-lg shadow-amber-500/20"
+            >
+              Log In As Super Admin
+            </button>
+            <button
+              onClick={() => {
+                window.location.href = "/dashboard";
+              }}
+              className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition"
+            >
+              My Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isOverviewLoading) {
     return (
