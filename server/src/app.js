@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
-import mongoSanitize from "express-mongo-sanitize";
+import mongoSanitize from "@exortek/express-mongo-sanitize";
 import rateLimit from "express-rate-limit";
 
 import authRoutes from "./routes/auth.routes.js";
