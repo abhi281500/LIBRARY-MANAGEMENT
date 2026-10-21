@@ -6,8 +6,8 @@ export const createPayment = async (payload) => {
   return data;
 };
 
-export const getAllPayments = async () => {
-  const { data } = await api.get("/payments");
+export const getAllPayments = async (params = {}) => {
+  const { data } = await api.get("/payments", { params });
   return data;
 };
 

@@ -7,7 +7,6 @@ class ApiFeatures {
     // Search
     search(fields = []) {
         if (this.queryString.search) {
-
             const keyword = this.queryString.search;
 
             this.query = this.query.find({
@@ -18,7 +17,6 @@ class ApiFeatures {
                     }
                 }))
             });
-
         }
 
         return this;
@@ -26,7 +24,6 @@ class ApiFeatures {
 
     // Filter
     filter() {
-
         const queryObj = { ...this.queryString };
 
         const removeFields = [
@@ -46,7 +43,6 @@ class ApiFeatures {
 
     // Sorting
     sort() {
-
         const sortBy = this.queryString.sortBy || "createdAt";
 
         const order =
@@ -63,11 +59,19 @@ class ApiFeatures {
 
     // Pagination
     paginate() {
+        const limitParam = this.queryString.limit;
+        if (
+            limitParam === "all" ||
+            limitParam === "ALL" ||
+            limitParam === "unlimited" ||
+            limitParam === "0"
+        ) {
+            this.query = this.query.limit(10000);
+            return this;
+        }
 
-        const page = Number(this.queryString.page) || 1;
-
-        const limit = Number(this.queryString.limit) || 10;
-
+        const page = Math.max(Number(this.queryString.page) || 1, 1);
+        const limit = Math.max(Number(limitParam) || 10, 1);
         const skip = (page - 1) * limit;
 
         this.query = this.query
@@ -76,7 +80,6 @@ class ApiFeatures {
 
         return this;
     }
-
 }
 
 export default ApiFeatures;

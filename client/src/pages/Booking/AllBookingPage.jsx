@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
@@ -31,6 +31,9 @@ import {
   Filter,
   CreditCard,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function AllBookingsPage() {
@@ -41,10 +44,14 @@ export default function AllBookingsPage() {
   const [bookingToCancel, setBookingToCancel] = useState(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
-  // 1. Fetch Bookings
-  const { data, isLoading, isError, error } = useQuery({
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25); // 10, 25, 50, 100, "ALL"
+
+  // 1. Fetch ALL Bookings for the Library
+  const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["bookings"],
-    queryFn: getAllBookings,
+    queryFn: () => getAllBookings({ limit: "all" }),
   });
 
   // 2. Fetch WhatsApp Template configuration
@@ -54,6 +61,11 @@ export default function AllBookingsPage() {
   });
 
   const bookings = data?.bookings || [];
+
+  // Reset page to 1 when search, filter or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, shiftFilter, pageSize]);
 
   // Cancel Booking Mutation
   const cancelMutation = useMutation({
@@ -99,20 +111,46 @@ export default function AllBookingsPage() {
   const getShiftBadge = (shift) => {
     switch (shift) {
       case "MORNING":
-        return { label: "Morning", bg: "bg-amber-50 text-amber-800 border-amber-200" };
+        return {
+          label: "Morning (6 AM - 2 PM)",
+          bg: "bg-amber-50 text-amber-700 border-amber-200",
+        };
       case "EVENING":
-        return { label: "Evening", bg: "bg-indigo-50 text-indigo-800 border-indigo-200" };
+        return {
+          label: "Evening (2 PM - 10 PM)",
+          bg: "bg-indigo-50 text-indigo-700 border-indigo-200",
+        };
       case "NIGHT":
-        return { label: "Night", bg: "bg-purple-50 text-purple-800 border-purple-200" };
+        return {
+          label: "Night (10 PM - 6 AM)",
+          bg: "bg-purple-50 text-purple-700 border-purple-200",
+        };
+      case "CUSTOM":
+        return {
+          label: "Custom Shift",
+          bg: "bg-teal-50 text-teal-700 border-teal-200",
+        };
       case "FULL_DAY":
       default:
-        return { label: "Full Day", bg: "bg-emerald-50 text-emerald-800 border-emerald-200" };
+        return {
+          label: "Full Day (24 Hrs)",
+          bg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        };
     }
   };
 
-  const getValidityBadge = (endDateStr, status) => {
-    if (status !== "ACTIVE" || !endDateStr) return null;
-    const diffDays = Math.ceil((new Date(endDateStr) - new Date()) / (1000 * 60 * 60 * 24));
+  const getValidityBadge = (endDate, status) => {
+    if (status === "CANCELLED") {
+      return (
+        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200">
+          Cancelled
+        </span>
+      );
+    }
+    if (!endDate) return null;
+    const end = new Date(endDate);
+    const now = new Date();
+    const diffDays = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
       return (
@@ -142,19 +180,25 @@ export default function AllBookingsPage() {
     );
   };
 
-  // Filter Bookings
+  // Filter Bookings across ALL loaded data
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       const student = b.student || {};
       const user = student.user || {};
       const studentName = (user.name || "").toLowerCase();
+      const studentPhone = (user.phone || "").toLowerCase();
       const adm = (student.admissionNumber || "").toLowerCase();
       const seatNo = String(b.seat?.seatNumber || "").toLowerCase();
       const shift = (b.shift || "FULL_DAY").toUpperCase();
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
 
       const matchesSearch =
-        studentName.includes(q) || adm.includes(q) || seatNo.includes(q);
+        !q ||
+        studentName.includes(q) ||
+        studentPhone.includes(q) ||
+        adm.includes(q) ||
+        seatNo.includes(q);
+
       const matchesStatus =
         statusFilter === "ALL" || b.status === statusFilter;
       const matchesShift =
@@ -164,7 +208,7 @@ export default function AllBookingsPage() {
     });
   }, [bookings, searchQuery, statusFilter, shiftFilter]);
 
-  // Executive Stats
+  // Executive Stats (Calculated on ALL bookings)
   const activeCount = useMemo(
     () => bookings.filter((b) => b.status === "ACTIVE").length,
     [bookings]
@@ -174,6 +218,49 @@ export default function AllBookingsPage() {
       bookings.reduce((sum, b) => sum + Number(b.amount || 0), 0),
     [bookings]
   );
+  const expiringSoonCount = useMemo(() => {
+    const now = new Date();
+    return bookings.filter((b) => {
+      if (b.status !== "ACTIVE" || !b.endDate) return false;
+      const diff = Math.ceil((new Date(b.endDate) - now) / (1000 * 60 * 60 * 24));
+      return diff >= 0 && diff <= 3;
+    }).length;
+  }, [bookings]);
+
+  // Pagination Slice
+  const totalFiltered = filteredBookings.length;
+  const isShowAll = pageSize === "ALL";
+  const numPageSize = isShowAll ? totalFiltered : Number(pageSize);
+  const totalPages = isShowAll ? 1 : Math.max(1, Math.ceil(totalFiltered / (numPageSize || 1)));
+
+  const safePage = Math.min(Math.max(currentPage, 1), totalPages);
+
+  const paginatedBookings = useMemo(() => {
+    if (isShowAll) return filteredBookings;
+    const startIndex = (safePage - 1) * numPageSize;
+    return filteredBookings.slice(startIndex, startIndex + numPageSize);
+  }, [filteredBookings, isShowAll, safePage, numPageSize]);
+
+  const startIndex = (safePage - 1) * numPageSize;
+  const endIndex = Math.min(startIndex + paginatedBookings.length, totalFiltered);
+
+  // Generate page numbers
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages = [1];
+    if (safePage <= 4) {
+      pages.push(2, 3, 4, 5, "...", totalPages);
+      return pages;
+    }
+    if (safePage >= totalPages - 3) {
+      pages.push("...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      return pages;
+    }
+    pages.push("...", safePage - 1, safePage, safePage + 1, "...", totalPages);
+    return pages;
+  };
 
   // WhatsApp Sender
   const handleSendWhatsApp = (booking) => {
@@ -251,23 +338,25 @@ export default function AllBookingsPage() {
               Desk Allocations & Bookings
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Manage active seat subscriptions, shift timings, validity periods, and renewals.
+              Manage all seat subscriptions, shift timings, validity periods, and renewals.
             </p>
           </div>
 
-          <Link
-            to="/bookings/new"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            + Allocate New Desk
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              to="/bookings/new"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              + Allocate New Desk
+            </Link>
+          </div>
         </div>
 
         {/* 1. EXECUTIVE KPI SUMMARY */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Bookings</span>
               <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
@@ -278,7 +367,7 @@ export default function AllBookingsPage() {
             <p className="text-[11px] text-slate-500 mt-1">All-time reservation records</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Active Desks</span>
               <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
@@ -289,7 +378,18 @@ export default function AllBookingsPage() {
             <p className="text-[11px] text-emerald-700 font-bold mt-1">Currently occupied desks</p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Expiring Soon</span>
+              <div className="rounded-xl bg-amber-50 p-2 text-amber-600">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-2xl font-black text-amber-600 mt-3">{expiringSoonCount}</p>
+            <p className="text-[11px] text-amber-700 font-bold mt-1">Due in next 3 days</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Booking Value</span>
               <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600">
@@ -297,7 +397,7 @@ export default function AllBookingsPage() {
               </div>
             </div>
             <p className="text-2xl font-black text-slate-900 mt-3">{formatCurrency(totalRevenue)}</p>
-            <p className="text-[11px] text-slate-500 mt-1">Gross subscription fee value</p>
+            <p className="text-[11px] text-slate-500 mt-1">Gross fee commitments</p>
           </div>
 
         </div>
@@ -326,8 +426,8 @@ export default function AllBookingsPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs sm:text-sm font-semibold text-slate-700 outline-none focus:border-blue-500"
               >
-                <option value="ALL">All Statuses</option>
-                <option value="ACTIVE">Active Only</option>
+                <option value="ALL">All Statuses ({bookings.length})</option>
+                <option value="ACTIVE">Active Only ({activeCount})</option>
                 <option value="COMPLETED">Completed</option>
                 <option value="CANCELLED">Cancelled</option>
               </select>
@@ -343,12 +443,37 @@ export default function AllBookingsPage() {
                 <option value="MORNING">Morning (6 AM - 2 PM)</option>
                 <option value="EVENING">Evening (2 PM - 10 PM)</option>
                 <option value="NIGHT">Night (10 PM - 6 AM)</option>
+                <option value="CUSTOM">Custom Shift</option>
               </select>
+
+              {/* Rows Per Page (Quick Selector) */}
+              <div className="flex items-center gap-1.5 ml-auto sm:ml-0 text-xs text-slate-500 font-medium">
+                <span>Show:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPageSize(val === "ALL" ? "ALL" : Number(val));
+                  }}
+                  className="rounded-lg border border-slate-200 bg-white py-1 px-2 text-xs font-bold text-slate-800 outline-none focus:border-blue-500"
+                >
+                  <option value={10}>10 / page</option>
+                  <option value={25}>25 / page</option>
+                  <option value={50}>50 / page</option>
+                  <option value={100}>100 / page</option>
+                  <option value="ALL">Show All ({filteredBookings.length})</option>
+                </select>
+              </div>
             </div>
 
-            <span className="text-xs font-bold text-slate-500">
-              Showing <strong>{filteredBookings.length}</strong> of <strong>{bookings.length}</strong> allocations
-            </span>
+            <div className="text-xs font-bold text-slate-500 flex items-center gap-2">
+              <span>
+                Total: <strong>{totalFiltered}</strong> {totalFiltered !== bookings.length && `(of ${bookings.length})`}
+              </span>
+              {isFetching && !isLoading && (
+                <div className="w-3.5 h-3.5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+              )}
+            </div>
           </div>
 
           {/* Table */}
@@ -358,9 +483,22 @@ export default function AllBookingsPage() {
               <h4 className="text-sm font-bold text-slate-700">No Desk Allocations Found</h4>
               <p className="text-xs text-slate-500 mt-1 mb-4">
                 {searchQuery || statusFilter !== "ALL" || shiftFilter !== "ALL"
-                  ? "No bookings match your selected search filters."
+                  ? "No bookings match your selected search or shift filters."
                   : "Allocate your first student desk to begin tracking study sessions."}
               </p>
+              {(searchQuery || statusFilter !== "ALL" || shiftFilter !== "ALL") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setStatusFilter("ALL");
+                    setShiftFilter("ALL");
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold mr-2"
+                >
+                  Clear Filters
+                </button>
+              )}
               <Link
                 to="/bookings/new"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow transition-all"
@@ -382,7 +520,7 @@ export default function AllBookingsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                  {filteredBookings.map((b) => {
+                  {paginatedBookings.map((b) => {
                     const student = b.student || {};
                     const user = student.user || {};
                     const studentName = user.name || "Unknown Student";
@@ -399,13 +537,13 @@ export default function AllBookingsPage() {
                         {/* Student Info */}
                         <td className="py-3.5 px-5">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-xs">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-xs shrink-0">
                               {studentName.charAt(0)}
                             </div>
                             <div>
                               <Link
                                 to={`/students/${student._id}`}
-                                className="font-bold text-slate-900 hover:text-blue-600 transition-colors leading-tight block"
+                                className="font-bold text-slate-900 hover:text-blue-600 transition-colors leading-tight block truncate max-w-[180px]"
                               >
                                 {studentName}
                               </Link>
@@ -516,6 +654,95 @@ export default function AllBookingsPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* 3. PAGINATION CONTROLS FOOTER */}
+          {totalFiltered > 0 && (
+            <div className="bg-slate-50/80 border-t border-slate-200 px-5 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+              
+              {/* Counter details */}
+              <div className="text-xs text-slate-600">
+                {isShowAll ? (
+                  <span>
+                    Showing all <strong>{totalFiltered}</strong> allocations {totalFiltered !== bookings.length && `(filtered from ${bookings.length})`}
+                  </span>
+                ) : (
+                  <span>
+                    Showing <strong>{startIndex + 1}</strong> to <strong>{endIndex}</strong> of <strong>{totalFiltered}</strong> allocations {totalFiltered !== bookings.length && `(filtered from ${bookings.length})`}
+                  </span>
+                )}
+              </div>
+
+              {/* Rows Per Page & Page Controls */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className="hidden sm:inline">Rows per page:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPageSize(val === "ALL" ? "ALL" : Number(val));
+                    }}
+                    className="rounded-lg border border-slate-200 bg-white py-1 px-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value="ALL">All ({totalFiltered})</option>
+                  </select>
+                </div>
+
+                {!isShowAll && totalPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={safePage <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Prev</span>
+                    </button>
+
+                    {getPageNumbers().map((pageNum, idx) => {
+                      if (pageNum === "...") {
+                        return (
+                          <span key={`dots-${idx}`} className="w-7 h-7 flex items-center justify-center text-xs text-slate-400">
+                            ...
+                          </span>
+                        );
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`min-w-7 h-7 px-2 rounded-lg text-xs font-bold transition-all ${
+                            safePage === pageNum
+                              ? "bg-blue-600 text-white shadow-xs"
+                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      disabled={safePage >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      <span className="hidden sm:inline">Next</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 

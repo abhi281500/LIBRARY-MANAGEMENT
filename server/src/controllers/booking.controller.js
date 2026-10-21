@@ -175,13 +175,21 @@ export const getAllBookings = async (req, res) => {
         .json({ message: "Library not found for this owner" });
     }
 
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 10;
+    const isAll =
+      req.query.limit === "all" ||
+      req.query.limit === "ALL" ||
+      req.query.limit === "unlimited" ||
+      req.query.limit === "0";
 
     const totalBookings = await Booking.countDocuments({
       library: library._id,
     });
-    const totalPages = Math.ceil(totalBookings / limit);
+
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limitNum = Number(req.query.limit) || 10;
+    const limit = isAll ? (totalBookings || 1) : Math.max(limitNum, 1);
+    const totalPages = isAll ? 1 : Math.ceil(totalBookings / limit);
+
     const features = new ApiFeatures(
       Booking.find({
         library: library._id,
@@ -209,10 +217,12 @@ export const getAllBookings = async (req, res) => {
     return res.status(200).json({
       message: "booking retrieved successfully",
       pagination: {
-        page,
-        limit,
+        page: isAll ? 1 : page,
+        limit: isAll ? totalBookings : limit,
         totalBookings,
         totalPages,
+        hasNextPage: isAll ? false : page < totalPages,
+        hasPrevPage: isAll ? false : page > 1,
       },
       bookings,
     });

@@ -1,4 +1,5 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { studentPortalLookup } from "../../services/portal.service";
 import {
   GraduationCap,
@@ -16,11 +17,18 @@ import {
   Armchair,
   X,
   Lock,
+  ArrowLeft,
+  LayoutDashboard,
+  LogIn,
+  Home,
 } from "lucide-react";
 
 export default function StudentPortalPage() {
+  const navigate = useNavigate();
   const [identifier, setIdentifier] = useState("");
   const [pin, setPin] = useState("");
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const isLoggedIn = Boolean(token);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
@@ -73,32 +81,68 @@ export default function StudentPortalPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
-      {/* Top Banner Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      {/* Top Banner Header with PWA Back Navigation */}
+      <header className="border-b border-slate-800 bg-slate-900/95 backdrop-blur-md sticky top-0 z-30 shadow-md">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          
+          {/* Left: Quick Back Button + Brand Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20">
-              <GraduationCap className="w-6 h-6" />
+            <button
+              type="button"
+              onClick={() => navigate(isLoggedIn ? "/dashboard" : "/login")}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 transition shadow-xs group"
+              title={isLoggedIn ? "Return to Library Reception Dashboard" : "Return to Staff / Admin Login"}
+            >
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
+              <span>{isLoggedIn ? "Dashboard" : "Login"}</span>
+            </button>
+
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white font-bold shadow-lg shadow-indigo-500/20 shrink-0">
+              <GraduationCap className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="font-bold text-base md:text-lg tracking-tight text-white flex items-center gap-2">
-                StudyOS <span className="text-xs bg-indigo-500/20 text-indigo-400 font-medium px-2 py-0.5 rounded-full border border-indigo-500/30">Student Portal</span>
+              <h1 className="font-bold text-sm md:text-base tracking-tight text-white flex items-center gap-2">
+                StudyOS <span className="text-[10px] bg-indigo-500/20 text-indigo-400 font-semibold px-2 py-0.5 rounded-full border border-indigo-500/30">Student Portal</span>
               </h1>
-              <p className="text-xs text-slate-400">Self-Service Desk, Pass & Attendance Ledger</p>
+              <p className="text-[11px] text-slate-400 hidden sm:block">Self-Service Desk, Pass & Attendance Ledger</p>
             </div>
           </div>
 
-          {data && (
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
+            {data && (
+              <button
+                type="button"
+                onClick={() => {
+                  setData(null);
+                  setIdentifier("");
+                }}
+                className="text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition border border-slate-700 font-medium"
+              >
+                Switch Student
+              </button>
+            )}
+
             <button
-              onClick={() => {
-                setData(null);
-                setIdentifier("");
-              }}
-              className="text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg transition border border-slate-700"
+              type="button"
+              onClick={() => navigate(isLoggedIn ? "/dashboard" : "/login")}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-xs"
             >
-              Switch Account
+              {isLoggedIn ? (
+                <>
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Exit to Dashboard</span>
+                  <span className="sm:hidden">Exit</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Admin Login</span>
+                </>
+              )}
             </button>
-          )}
+          </div>
+
         </div>
       </header>
 
@@ -187,8 +231,16 @@ export default function StudentPortalPage() {
                 </button>
               </form>
 
-              <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
-                <p className="text-xs text-slate-500">
+              <div className="mt-8 pt-6 border-t border-slate-800/80 text-center space-y-3">
+                <button
+                  type="button"
+                  onClick={() => navigate(isLoggedIn ? "/dashboard" : "/login")}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1.5 font-semibold py-1 px-3 rounded-lg hover:bg-slate-800 transition"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>{isLoggedIn ? "Return to Library Admin Dashboard" : "Library Staff or Owner? Login Here"}</span>
+                </button>
+                <p className="text-[11px] text-slate-500">
                   Secured by StudyOS • Contact your library administrator for admission queries
                 </p>
               </div>

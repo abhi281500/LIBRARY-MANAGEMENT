@@ -5,8 +5,8 @@ export const createBooking = async (payload) => {
   return data;
 };
 
-export const getAllBookings = async () => {
-  const { data } = await api.get("/bookings");
+export const getAllBookings = async (params = {}) => {
+  const { data } = await api.get("/bookings", { params });
   return data;
 };
 
@@ -24,6 +24,3 @@ export const cancelBooking = async (id) => {
   const { data } = await api.patch(`/bookings/${id}/cancel`);
   return data;
 };
-
-
-
