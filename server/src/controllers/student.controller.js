@@ -3,6 +3,8 @@ import User from "../models/user.models.js";
 import Library from "../models/library.models.js";
 import Booking from "../models/booking.models.js";
 import Payment from "../models/payment.models.js";
+import Seat from "../models/seat.models.js";
+import Attendance from "../models/attendance.models.js";
 import ApiFeatures from "../utils/apiFeatures.js";
 import mongoose from "mongoose";
 
@@ -407,7 +409,53 @@ export const deleteStudent = async (req, res) => {
     try {
       session.startTransaction();
 
-      await User.findByIdAndDelete(student.user).session(session);
+      // 1. Find all bookings of this student to free allocated seats
+      const studentBookings = await Booking.find({
+        student: id,
+        library: library._id,
+      }).session(session);
+
+      const seatIdsToCheck = new Set();
+      for (const b of studentBookings) {
+        if (b.seat) {
+          seatIdsToCheck.add(b.seat.toString());
+        }
+      }
+
+      // 2. Cascade delete all bookings of this student
+      await Booking.deleteMany({
+        student: id,
+        library: library._id,
+      }).session(session);
+
+      // 3. Free up seats if no other active booking exists
+      for (const seatId of seatIdsToCheck) {
+        const remainingActive = await Booking.findOne({
+          seat: seatId,
+          status: "ACTIVE",
+          endDate: { $gte: new Date() },
+        }).session(session);
+
+        if (!remainingActive) {
+          await Seat.findByIdAndUpdate(seatId, { status: "AVAILABLE" }).session(session);
+        }
+      }
+
+      // 4. Cascade delete payment receipts of this student in this library
+      await Payment.deleteMany({
+        student: id,
+        library: library._id,
+      }).session(session);
+
+      // 5. Cascade delete attendance history
+      await Attendance.deleteMany({
+        student: id,
+      }).session(session);
+
+      // 6. Delete user and student documents
+      if (student.user) {
+        await User.findByIdAndDelete(student.user).session(session);
+      }
       await Student.findByIdAndDelete(id).session(session);
 
       await session.commitTransaction();
@@ -419,7 +467,7 @@ export const deleteStudent = async (req, res) => {
     }
 
     return res.status(200).json({
-      message: "Student deleted successfully",
+      message: "Student record, desk allocations, fee receipts, and study attendance cleaned up successfully.",
     });
   } catch (error) {
     console.error(error);

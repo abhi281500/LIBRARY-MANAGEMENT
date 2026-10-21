@@ -80,8 +80,7 @@ export const getLibraryById = async (req, res) => {
 export const updateLibrary = async (req, res) => {
     try {
         const { id } = req.params;
-        const { openTime, closeTime, address, phone, description, totalSeats } = req.body;
-
+        const { name, openTime, closeTime, address, phone, upiId, description, totalSeats } = req.body;
 
         const library = await Library.findById(id);
 
@@ -101,13 +100,15 @@ export const updateLibrary = async (req, res) => {
             });
         }
 
-        // Update
-    library.openTime = openTime ?? library.openTime;
-    library.closeTime = closeTime ?? library.closeTime;
-    library.address = address ?? library.address;
-    library.phone = phone ?? library.phone;
-    library.description = description ?? library.description;
-    library.totalSeats = totalSeats ?? library.totalSeats;
+        // Update all fields including name and upiId
+        if (name !== undefined && name.trim()) library.name = name.trim();
+        if (openTime !== undefined) library.openTime = openTime;
+        if (closeTime !== undefined) library.closeTime = closeTime;
+        if (address !== undefined && address.trim()) library.address = address.trim();
+        if (phone !== undefined && phone.trim()) library.phone = phone.trim();
+        if (upiId !== undefined) library.upiId = upiId.trim();
+        if (description !== undefined) library.description = description.trim();
+        if (totalSeats !== undefined && Number(totalSeats) > 0) library.totalSeats = Number(totalSeats);
 
         await library.save();
 
@@ -304,10 +305,12 @@ export const updateWhatsAppTemplates = async (req, res) => {
     }
 
     if (templates) {
+      const existing = library.whatsappTemplates?.toObject ? library.whatsappTemplates.toObject() : library.whatsappTemplates;
       library.whatsappTemplates = {
-        ...library.whatsappTemplates,
+        ...existing,
         ...templates,
       };
+      library.markModified("whatsappTemplates");
     }
 
     await library.save();
@@ -316,6 +319,8 @@ export const updateWhatsAppTemplates = async (req, res) => {
       message: "WhatsApp templates saved successfully",
       templates: library.whatsappTemplates,
       upiId: library.upiId,
+      libraryName: library.name,
+      libraryPhone: library.phone,
     });
   } catch (error) {
     console.error("updateWhatsAppTemplates error:", error);

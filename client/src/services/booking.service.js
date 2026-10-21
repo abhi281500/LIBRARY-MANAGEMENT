@@ -24,3 +24,13 @@ export const cancelBooking = async (id) => {
   const { data } = await api.patch(`/bookings/${id}/cancel`);
   return data;
 };
+
+export const deleteBooking = async (id) => {
+  const { data } = await api.delete(`/bookings/${id}`);
+  return data;
+};
+
+export const cleanupExpiredBookings = async () => {
+  const { data } = await api.delete("/bookings/cleanup/expired");
+  return data;
+};

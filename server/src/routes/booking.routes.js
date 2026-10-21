@@ -1,5 +1,5 @@
 import express from "express"
-import { createBooking,getAllBookings,getBookingById,updateBooking,cancelBooking } from "../controllers/booking.controller.js";
+import { createBooking, getAllBookings, getBookingById, updateBooking, cancelBooking, deleteBooking, cleanupExpiredBookings } from "../controllers/booking.controller.js";
 import auth from "../middlewares/auth.middlewares.js"
 import roleMiddleware from "../middlewares/role.middlewares.js"
 const router = express.Router();
@@ -29,7 +29,17 @@ router.put("/:id",
 router.patch("/:id/cancel",
     auth,
     roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN") ,
-    cancelBooking)   
+    cancelBooking);
+
+router.delete("/cleanup/expired",
+    auth,
+    roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
+    cleanupExpiredBookings);
+
+router.delete("/:id",
+    auth,
+    roleMiddleware("LIBRARY_OWNER", "SUPER_ADMIN"),
+    deleteBooking);   
 
 
 

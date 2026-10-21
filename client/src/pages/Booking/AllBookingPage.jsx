@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import {
   getAllBookings,
   cancelBooking,
+  deleteBooking,
+  cleanupExpiredBookings,
 } from "../../services/booking.service.js";
 import { getWhatsAppTemplates } from "../../services/library.service.js";
 import {
@@ -41,8 +43,9 @@ export default function AllBookingsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [shiftFilter, setShiftFilter] = useState("ALL");
-  const [bookingToCancel, setBookingToCancel] = useState(null);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -67,25 +70,44 @@ export default function AllBookingsPage() {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, shiftFilter, pageSize]);
 
-  // Cancel Booking Mutation
-  const cancelMutation = useMutation({
-    mutationFn: cancelBooking,
+  // Delete / Cancel Booking Mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteBooking,
     onSuccess: (res) => {
-      toast.success(res?.message || "Booking cancelled successfully");
-      setShowCancelDialog(false);
-      setBookingToCancel(null);
+      toast.success(res?.message || "Booking deleted and desk freed successfully");
+      setShowDeleteDialog(false);
+      setBookingToDelete(null);
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["all-seats"] });
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || "Failed to cancel booking");
+      toast.error(err.response?.data?.message || "Failed to delete booking");
     },
   });
 
-  const handleConfirmCancel = () => {
-    if (!bookingToCancel?._id) return;
-    cancelMutation.mutate(bookingToCancel._id);
+  // Bulk Cleanup Expired Bookings Mutation
+  const cleanupMutation = useMutation({
+    mutationFn: cleanupExpiredBookings,
+    onSuccess: (res) => {
+      toast.success(res?.message || "Expired bookings cleaned up successfully");
+      setShowCleanupDialog(false);
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["all-seats"] });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Failed to clean up expired bookings");
+    },
+  });
+
+  const handleConfirmDelete = () => {
+    if (!bookingToDelete?._id) return;
+    deleteMutation.mutate(bookingToDelete._id);
+  };
+
+  const handleConfirmCleanup = () => {
+    cleanupMutation.mutate();
   };
 
   const formatDate = (dateStr) => {
@@ -213,6 +235,15 @@ export default function AllBookingsPage() {
     () => bookings.filter((b) => b.status === "ACTIVE").length,
     [bookings]
   );
+  const inactiveCount = useMemo(() => {
+    const now = new Date();
+    return bookings.filter(
+      (b) =>
+        b.status === "COMPLETED" ||
+        b.status === "CANCELLED" ||
+        (b.endDate && new Date(b.endDate) < now)
+    ).length;
+  }, [bookings]);
   const totalRevenue = useMemo(
     () =>
       bookings.reduce((sum, b) => sum + Number(b.amount || 0), 0),
@@ -343,6 +374,18 @@ export default function AllBookingsPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {inactiveCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowCleanupDialog(true)}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-4 py-2.5 text-xs sm:text-sm font-bold text-rose-700 shadow-xs transition-all"
+                title="Permanently remove historical expired and cancelled bookings"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span>Clear Expired ({inactiveCount})</span>
+              </button>
+            )}
+
             <Link
               to="/bookings/new"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-600/20 hover:bg-blue-700 transition-all"
@@ -634,18 +677,16 @@ export default function AllBookingsPage() {
                               <Edit className="w-4 h-4" />
                             </Link>
 
-                            {b.status === "ACTIVE" && (
-                              <button
-                                onClick={() => {
-                                  setBookingToCancel(b);
-                                  setShowCancelDialog(true);
-                                }}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-slate-100 transition-colors"
-                                title="Cancel Desk Allocation"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                setBookingToDelete(b);
+                                setShowDeleteDialog(true);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-slate-100 transition-colors"
+                              title={b.status === "ACTIVE" ? "Cancel & Free Desk" : "Delete Booking Record"}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
 
@@ -750,21 +791,39 @@ export default function AllBookingsPage() {
 
       </div>
 
-      {/* Cancel Confirmation Dialog */}
+      {/* Delete / Cancel Confirmation Dialog */}
       <ConfirmDialog
-        open={showCancelDialog}
-        title="Cancel Seat Booking?"
-        message={`Are you sure you want to cancel the desk booking for ${
-          bookingToCancel?.student?.user?.name || "this student"
-        }? The allocated desk will be freed immediately.`}
-        confirmText="Cancel Booking"
-        cancelText="Keep Active"
-        onConfirm={handleConfirmCancel}
+        open={showDeleteDialog}
+        title={bookingToDelete?.status === "ACTIVE" ? "Cancel & Delete Active Booking?" : "Delete Inactive/Expired Booking?"}
+        message={
+          bookingToDelete?.status === "ACTIVE"
+            ? `Are you sure you want to cancel and delete the active booking for "${
+                bookingToDelete?.student?.user?.name || "this student"
+              }" on Desk #${bookingToDelete?.seat?.seatNumber || "N/A"}? The desk will be freed immediately.`
+            : `Are you sure you want to delete this historical/expired booking record for "${
+                bookingToDelete?.student?.user?.name || "this student"
+              }"?`
+        }
+        confirmText="Delete Booking"
+        cancelText="Keep Record"
+        onConfirm={handleConfirmDelete}
         onCancel={() => {
-          setShowCancelDialog(false);
-          setBookingToCancel(null);
+          setShowDeleteDialog(false);
+          setBookingToDelete(null);
         }}
-        isLoading={cancelMutation.isPending}
+        isLoading={deleteMutation.isPending}
+      />
+
+      {/* Bulk Cleanup Expired Confirmation Dialog */}
+      <ConfirmDialog
+        open={showCleanupDialog}
+        title="Clean Up All Expired Bookings?"
+        message={`This will permanently delete ${inactiveCount} expired, completed, or cancelled booking records and verify that all desks without active students are set to AVAILABLE. Are you sure you want to proceed?`}
+        confirmText="Cleanup All Expired"
+        cancelText="Cancel"
+        onConfirm={handleConfirmCleanup}
+        onCancel={() => setShowCleanupDialog(false)}
+        isLoading={cleanupMutation.isPending}
       />
     </div>
   );

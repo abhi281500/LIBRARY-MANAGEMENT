@@ -34,6 +34,12 @@ export const librarySchema = z.object({
     .trim()
     .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit phone number"),
 
+  upiId: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
   description: z
     .string()
     .trim()

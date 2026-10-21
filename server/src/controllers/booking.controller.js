@@ -435,3 +435,94 @@ export const cancelBooking = async (req, res) => {
     return res.status(500).json({ message: "internal server error" });
   }
 };
+
+export const deleteBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const library = await Library.findOne({ owner: req.user._id });
+    if (!library) {
+      return res.status(404).json({ message: "Library not found for this owner" });
+    }
+
+    const booking = await Booking.findOne({ _id: id, library: library._id });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking record not found" });
+    }
+
+    const seatId = booking.seat;
+    await Booking.findByIdAndDelete(id);
+
+    // Free up seat if no other active booking remains on this desk
+    if (seatId) {
+      const remainingActive = await Booking.findOne({
+        seat: seatId,
+        status: "ACTIVE",
+        endDate: { $gte: new Date() },
+      });
+      if (!remainingActive) {
+        await Seat.findByIdAndUpdate(seatId, { status: "AVAILABLE" });
+      }
+    }
+
+    return res.status(200).json({
+      message: "Booking record deleted successfully.",
+    });
+  } catch (error) {
+    console.error("deleteBooking error:", error);
+    return res.status(500).json({ message: error.message || "Failed to delete booking" });
+  }
+};
+
+export const cleanupExpiredBookings = async (req, res) => {
+  try {
+    const library = await Library.findOne({ owner: req.user._id });
+    if (!library) {
+      return res.status(404).json({ message: "Library not found for this owner" });
+    }
+
+    const now = new Date();
+    const expiredList = await Booking.find({
+      library: library._id,
+      $or: [
+        { status: "COMPLETED" },
+        { status: "CANCELLED" },
+        { endDate: { $lt: now } },
+      ],
+    });
+
+    if (expiredList.length === 0) {
+      return res.status(200).json({
+        message: "No expired or inactive bookings to clean up.",
+        deletedCount: 0,
+      });
+    }
+
+    const seatIds = new Set();
+    const bookingIds = [];
+    for (const b of expiredList) {
+      bookingIds.push(b._id);
+      if (b.seat) seatIds.add(b.seat.toString());
+    }
+
+    await Booking.deleteMany({ _id: { $in: bookingIds } });
+
+    for (const seatId of seatIds) {
+      const remainingActive = await Booking.findOne({
+        seat: seatId,
+        status: "ACTIVE",
+        endDate: { $gte: now },
+      });
+      if (!remainingActive) {
+        await Seat.findByIdAndUpdate(seatId, { status: "AVAILABLE" });
+      }
+    }
+
+    return res.status(200).json({
+      message: `Cleaned up ${bookingIds.length} expired/completed booking records successfully.`,
+      deletedCount: bookingIds.length,
+    });
+  } catch (error) {
+    console.error("cleanupExpiredBookings error:", error);
+    return res.status(500).json({ message: error.message || "Failed to clean up expired bookings" });
+  }
+};

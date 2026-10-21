@@ -32,12 +32,13 @@ function EditLibraryPage() {
       closeTime: "",
       address: "",
       phone: "",
+      upiId: "",
       description: "",
       totalSeats: "",
     },
   });
 
-  // 1. Existing library fetch karo
+  // 1. Fetch existing library
   const {
     isLoading,
     isError,
@@ -48,13 +49,14 @@ function EditLibraryPage() {
       const data = await getLibraryById(id);
 
       reset({
-        name: data.library.name,
-        openTime: data.library.openTime,
-        closeTime: data.library.closeTime,
-        address: data.library.address,
-        phone: data.library.phone,
+        name: data.library.name || "",
+        openTime: data.library.openTime || "",
+        closeTime: data.library.closeTime || "",
+        address: data.library.address || "",
+        phone: data.library.phone || "",
+        upiId: data.library.upiId || "",
         description: data.library.description || "",
-        totalSeats: data.library.totalSeats,
+        totalSeats: data.library.totalSeats || 50,
       });
 
       return data;
@@ -69,14 +71,12 @@ function EditLibraryPage() {
     onSuccess: (data) => {
       toast.success(data.message || "Library updated successfully");
 
-      // Old cached library data ko refresh karo
-      queryClient.invalidateQueries({
-        queryKey: ["library", id],
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: ["libraries"],
-      });
+      // Invalidate all related caches
+      queryClient.invalidateQueries({ queryKey: ["library", id] });
+      queryClient.invalidateQueries({ queryKey: ["libraries"] });
+      queryClient.invalidateQueries({ queryKey: ["my-library"] });
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
 
       navigate(`/libraries/${id}`);
     },
@@ -100,9 +100,7 @@ function EditLibraryPage() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-lg font-medium">
-          Loading library...
-        </p>
+        <p className="text-lg font-medium">Loading library details...</p>
       </div>
     );
   }
@@ -111,8 +109,7 @@ function EditLibraryPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <p className="text-red-500">
-          {error.response?.data?.message ||
-            "Failed to load library"}
+          {error.response?.data?.message || "Failed to load library"}
         </p>
 
         <Button
@@ -129,12 +126,12 @@ function EditLibraryPage() {
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="mx-auto max-w-xl">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">
-            Edit Library
+          <h1 className="text-3xl font-bold text-slate-900">
+            Edit Library Information
           </h1>
 
           <p className="mt-1 text-gray-500">
-            Update your library information
+            Update your library profile, desk capacity, operational hours, and billing UPI ID.
           </p>
         </div>
 
@@ -143,62 +140,74 @@ function EditLibraryPage() {
           className="space-y-5 rounded-xl bg-white p-8 shadow"
         >
           <Input
-            label="Name"
+            label="Library Name"
             type="text"
-            placeholder="Enter library name"
+            placeholder="e.g. StudySpace Central Reading Room"
             error={errors.name?.message}
             {...register("name")}
           />
 
-          <Input
-            label="Open Time"
-            type="time"
-            error={errors.openTime?.message}
-            {...register("openTime")}
-          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Open Time"
+              type="time"
+              error={errors.openTime?.message}
+              {...register("openTime")}
+            />
+
+            <Input
+              label="Close Time"
+              type="time"
+              error={errors.closeTime?.message}
+              {...register("closeTime")}
+            />
+          </div>
 
           <Input
-            label="Close Time"
-            type="time"
-            error={errors.closeTime?.message}
-            {...register("closeTime")}
-          />
-
-          <Input
-            label="Address"
+            label="Complete Physical Address"
             type="text"
-            placeholder="Enter library address"
+            placeholder="Enter library street address, landmark, city"
             error={errors.address?.message}
             {...register("address")}
           />
 
-          <Input
-            label="Phone"
-            type="tel"
-            placeholder="Enter library phone number"
-            error={errors.phone?.message}
-            {...register("phone")}
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="Helpline Phone Number"
+              type="tel"
+              placeholder="10-digit mobile number"
+              error={errors.phone?.message}
+              {...register("phone")}
+            />
+
+            <Input
+              label="Official UPI ID (Fees & QR)"
+              type="text"
+              placeholder="e.g. yourlibrary@okaxis"
+              error={errors.upiId?.message}
+              {...register("upiId")}
+            />
+          </div>
 
           <Input
-            label="Description"
+            label="Library Description & Amenities"
             type="text"
-            placeholder="Enter library description"
+            placeholder="WiFi, Air conditioned, RO water, power sockets"
             error={errors.description?.message}
             {...register("description")}
           />
 
           <Input
-            label="Total Seats"
+            label="Total Seat Capacity"
             type="number"
-            placeholder="Enter total seats"
+            placeholder="e.g. 50"
             error={errors.totalSeats?.message}
             {...register("totalSeats", {
               valueAsNumber: true,
             })}
           />
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <Button
               type="submit"
               loading={mutation.isPending}

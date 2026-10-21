@@ -32,7 +32,7 @@ function RecentPayments({ payments = [] }) {
               {/* Payment information */}
               <div>
                 <p className="font-medium text-gray-900">
-                  {payment.student?.user.name || "Unknown Student"}
+                  {payment.student?.user?.name || "Unknown Student"}
                 </p>
 
                 <p className="mt-1 text-sm text-gray-500">
