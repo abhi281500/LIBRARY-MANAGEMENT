@@ -19,6 +19,9 @@ import portalRoutes from "./routes/portal.routes.js";
 
 const app = express();
 
+// Enable Trust Proxy for production reverse proxies (Vercel, Render, AWS, Nginx)
+app.set("trust proxy", 1);
+
 // 1. Security Headers (Helmet)
 app.use(
   helmet({

@@ -235,14 +235,19 @@ export const getAllBookings = async (req, res) => {
 export const getBookingById = async (req, res) => {
   try {
     const { id } = req.params;
-    const library = await Library.findOne({ owner: req.user._id });
-    if (!library) {
-      return res
-        .status(404)
-        .json({ message: "Library not found for this owner" });
+
+    let query = { _id: id };
+    if (req.user.role !== "SUPER_ADMIN") {
+      const library = await Library.findOne({ owner: req.user._id });
+      if (!library) {
+        return res
+          .status(404)
+          .json({ message: "Library not found for this owner" });
+      }
+      query.library = library._id;
     }
 
-    const booking = await Booking.findOne({ _id: id, library: library._id })
+    const booking = await Booking.findOne(query)
       .populate({
         path: "student",
         populate: {
@@ -252,10 +257,10 @@ export const getBookingById = async (req, res) => {
       })
       .populate({
         path: "seat",
-        select: "seatNumber status",
+        select: "seatNumber floor type status",
       });
 
-    if (!booking) return res.status(404).json({ message: "booking not found" });
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
 
     return res.status(200).json({
       message: "booking retrieved successfully",
@@ -277,22 +282,28 @@ export const updateBooking = async (req, res) => {
       startDate,
       endDate,
       amount,
+      shift,
     } = req.body;
 
-    const library = await Library.findOne({
-      owner: req.user._id,
-    });
+    let booking;
+    if (req.user.role === "SUPER_ADMIN") {
+      booking = await Booking.findById(id);
+    } else {
+      const library = await Library.findOne({
+        owner: req.user._id,
+      });
 
-    if (!library) {
-      return res.status(404).json({
-        message: "Library not found",
+      if (!library) {
+        return res.status(404).json({
+          message: "Library not found",
+        });
+      }
+
+      booking = await Booking.findOne({
+        _id: id,
+        library: library._id,
       });
     }
-
-    const booking = await Booking.findOne({
-      _id: id,
-      library: library._id,
-    });
 
     if (!booking) {
       return res.status(404).json({
@@ -327,6 +338,34 @@ export const updateBooking = async (req, res) => {
       });
     }
 
+    const validShifts = ["MORNING", "EVENING", "FULL_DAY", "NIGHT", "CUSTOM"];
+    const targetShift = shift ? (validShifts.includes(shift) ? shift : booking.shift) : booking.shift;
+
+    // Determine conflicting shifts
+    let conflictingShifts = [targetShift];
+    if (targetShift === "FULL_DAY") {
+      conflictingShifts = ["MORNING", "EVENING", "FULL_DAY", "NIGHT", "CUSTOM"];
+    } else {
+      conflictingShifts = [targetShift, "FULL_DAY"];
+    }
+
+    // Check if another active booking exists on this seat with conflicting shift in overlapping date range
+    const conflict = await Booking.findOne({
+      _id: { $ne: booking._id },
+      seat: booking.seat,
+      library: booking.library,
+      status: "ACTIVE",
+      shift: { $in: conflictingShifts },
+      startDate: { $lte: end },
+      endDate: { $gte: start },
+    });
+
+    if (conflict) {
+      return res.status(409).json({
+        message: `Seat is already booked in ${conflict.shift} shift for overlapping dates`,
+      });
+    }
+
     const session = await mongoose.startSession();
 
     try {
@@ -334,6 +373,7 @@ export const updateBooking = async (req, res) => {
 
       booking.startDate = start;
       booking.endDate = end;
+      booking.shift = targetShift;
 
       if (amount !== undefined) {
         booking.amount = Number(amount);
@@ -368,21 +408,23 @@ export const cancelBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const library = await Library.findOne({ owner: req.user._id });
-    if (!library) {
-      return res
-        .status(404)
-        .json({ message: "Library not found for this owner" });
+    let booking;
+    if (req.user.role === "SUPER_ADMIN") {
+      booking = await Booking.findById(id);
+    } else {
+      const library = await Library.findOne({ owner: req.user._id });
+      if (!library) {
+        return res
+          .status(404)
+          .json({ message: "Library not found for this owner" });
+      }
+      booking = await Booking.findOne({ _id: id, library: library._id });
     }
 
-    const booking = await Booking.findOne({ _id: id, library: library._id });
     if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
     }
-    const seat = await Seat.findOne({
-      _id: booking.seat,
-      library: library._id,
-    });
+    const seat = await Seat.findById(booking.seat);
 
     if (!seat) {
       return res.status(404).json({
@@ -439,12 +481,18 @@ export const cancelBooking = async (req, res) => {
 export const deleteBooking = async (req, res) => {
   try {
     const { id } = req.params;
-    const library = await Library.findOne({ owner: req.user._id });
-    if (!library) {
-      return res.status(404).json({ message: "Library not found for this owner" });
+
+    let booking;
+    if (req.user.role === "SUPER_ADMIN") {
+      booking = await Booking.findById(id);
+    } else {
+      const library = await Library.findOne({ owner: req.user._id });
+      if (!library) {
+        return res.status(404).json({ message: "Library not found for this owner" });
+      }
+      booking = await Booking.findOne({ _id: id, library: library._id });
     }
 
-    const booking = await Booking.findOne({ _id: id, library: library._id });
     if (!booking) {
       return res.status(404).json({ message: "Booking record not found" });
     }

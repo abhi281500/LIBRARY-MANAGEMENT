@@ -340,11 +340,21 @@ export const refundPayment = async (req, res) => {
 
       booking.status = "CANCELLED";
 
-      seat.status = "AVAILABLE";
+      // Only free seat if no other active booking exists on that seat
+      const otherActive = await Booking.countDocuments({
+        seat: seat._id,
+        _id: { $ne: booking._id },
+        status: "ACTIVE",
+        endDate: { $gte: new Date() },
+      }).session(session);
+
+      if (otherActive === 0 && seat.status !== "MAINTENANCE") {
+        seat.status = "AVAILABLE";
+        await seat.save({ session });
+      }
 
       await payment.save({ session });
       await booking.save({ session });
-      await seat.save({ session });
 
       await session.commitTransaction();
     } catch (error) {

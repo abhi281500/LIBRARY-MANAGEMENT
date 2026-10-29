@@ -7,12 +7,14 @@ class ApiFeatures {
     // Search
     search(fields = []) {
         if (this.queryString.search) {
-            const keyword = this.queryString.search;
+            // Escape special regex characters to prevent MongoDB syntax errors / ReDoS
+            const raw = String(this.queryString.search).trim();
+            const safeKeyword = raw.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
 
             this.query = this.query.find({
                 $or: fields.map(field => ({
                     [field]: {
-                        $regex: keyword,
+                        $regex: safeKeyword,
                         $options: "i"
                     }
                 }))

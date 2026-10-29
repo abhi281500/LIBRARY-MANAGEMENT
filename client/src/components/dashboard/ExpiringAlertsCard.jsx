@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import { getExpiringSoonBookings } from "../../services/dashboard.service.js";
+import { deleteBooking } from "../../services/booking.service.js";
 import { getWhatsAppTemplates } from "../../services/library.service.js";
+import ConfirmDialog from "../feedback/ConfirmDialog.jsx";
 import {
   formatTemplateMessage,
   sendWhatsAppMessage,
@@ -19,10 +22,13 @@ import {
   CheckCircle2,
   AlertTriangle,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 export default function ExpiringAlertsCard() {
+  const queryClient = useQueryClient();
   const [sentMap, setSentMap] = useState({});
+  const [bookingToDelete, setBookingToDelete] = useState(null);
 
   // 1. Fetch Expiring Soon Bookings
   const { data: expiryData, isLoading, isError } = useQuery({
@@ -34,6 +40,25 @@ export default function ExpiringAlertsCard() {
   const { data: templateData } = useQuery({
     queryKey: ["whatsapp-templates"],
     queryFn: getWhatsAppTemplates,
+  });
+
+  // 3. Delete / Remove Expiring Booking Mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteBooking,
+    onSuccess: () => {
+      toast.success("Booking record deleted and desk marked available!");
+      setBookingToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["expiringSoonBookings"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["seatMatrix"] });
+      queryClient.invalidateQueries({ queryKey: ["seats"] });
+      queryClient.invalidateQueries({ queryKey: ["all-seats"] });
+      queryClient.invalidateQueries({ queryKey: ["all-students"] });
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || "Failed to delete booking");
+    },
   });
 
   const expiringBookings = expiryData?.expiringBookings || [];
@@ -252,11 +277,36 @@ export default function ExpiringAlertsCard() {
                 >
                   Renew
                 </Link>
+
+                <button
+                  type="button"
+                  onClick={() => setBookingToDelete(b)}
+                  className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition-all"
+                  title="Delete Booking Record"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Confirmation Dialog for Deleting Booking */}
+      <ConfirmDialog
+        open={!!bookingToDelete}
+        title="Delete Expiring Booking?"
+        message={`Are you sure you want to delete the booking for ${bookingToDelete?.student?.user?.name || "Student"} (Desk #${bookingToDelete?.seat?.seatNumber || "N/A"})? This will immediately remove this reservation record and free up the desk.`}
+        confirmText="Yes, Delete Booking"
+        cancelText="Cancel"
+        onConfirm={() => {
+          if (bookingToDelete?._id) {
+            deleteMutation.mutate(bookingToDelete._id);
+          }
+        }}
+        onClose={() => setBookingToDelete(null)}
+        loading={deleteMutation.isPending}
+      />
     </div>
   );
 }

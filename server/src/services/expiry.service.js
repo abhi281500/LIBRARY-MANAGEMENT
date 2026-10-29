@@ -69,8 +69,9 @@ export const getExpiringBookings = async (libraryId, days = 3) => {
       // Cancelled bookings ko dashboard par nahi dikhana
       status: { $ne: "CANCELLED" },
 
-      // Past expired + today + next N days
+      // Recent overdue (up to 30 days) + today + next N days
       endDate: {
+        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         $lte: threshold,
       },
     })

@@ -156,7 +156,8 @@ export const getAllStudents = async (req, res) => {
     // - Phone
     // --------------------------------------------------
     if (search) {
-      const searchRegex = new RegExp(search, "i");
+      const safeSearch = String(search).replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      const searchRegex = new RegExp(safeSearch, "i");
 
       const matchingUsers = await User.find({
         $or: [

@@ -1,5 +1,10 @@
 import Library from '../models/library.models.js'
 import Seat from "../models/seat.models.js";
+import Student from "../models/student.models.js";
+import Booking from "../models/booking.models.js";
+import Payment from "../models/payment.models.js";
+import Expense from "../models/expense.models.js";
+import Attendance from "../models/attendance.models.js";
 
 export const createLibrary = async (req, res) => {
     try {
@@ -147,10 +152,19 @@ export const deleteLibrary = async (req, res) => {
             });
         }
 
-        await library.deleteOne();
+        // Cascade delete all associated records to ensure data consistency
+        await Promise.all([
+            Seat.deleteMany({ library: id }),
+            Booking.deleteMany({ library: id }),
+            Payment.deleteMany({ library: id }),
+            Student.deleteMany({ library: id }),
+            Expense.deleteMany({ library: id }),
+            Attendance.deleteMany({ library: id }),
+            library.deleteOne(),
+        ]);
 
         return res.status(200).json({
-            message: "Library deleted successfully"
+            message: "Library and associated data deleted successfully"
         });
 
     } catch (error) {

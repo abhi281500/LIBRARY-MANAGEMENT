@@ -41,9 +41,10 @@ export const toggleCheckInOut = async (req, res) => {
 
     // 2. Admission Number
     if (!student) {
+      const safeAdm = String(parsedAdm).replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
       student = await Student.findOne({
         library: library._id,
-        admissionNumber: { $regex: new RegExp(`^${parsedAdm}$`, "i") },
+        admissionNumber: { $regex: new RegExp(`^${safeAdm}$`, "i") },
       }).populate("user", "name email phone");
     }
 

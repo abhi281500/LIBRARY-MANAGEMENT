@@ -5,6 +5,8 @@ import Booking from "../models/booking.models.js";
 import Payment from "../models/payment.models.js";
 import Attendance from "../models/attendance.models.js";
 
+const escapeRegex = (str) => String(str).replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+
 /**
  * 1. STUDENT PORTAL LOOKUP (By Phone Number or Admission Number)
  */
@@ -17,6 +19,7 @@ export const studentPortalLookup = async (req, res) => {
     }
 
     const cleanIdentifier = identifier.trim();
+    const safeIdentifier = escapeRegex(cleanIdentifier);
     let student = null;
 
     // 1. Check by phone
@@ -37,7 +40,7 @@ export const studentPortalLookup = async (req, res) => {
     // 2. Check by admissionNumber
     if (!student) {
       student = await Student.findOne({
-        admissionNumber: { $regex: new RegExp(`^${cleanIdentifier}$`, "i") },
+        admissionNumber: { $regex: new RegExp(`^${safeIdentifier}$`, "i") },
       })
         .populate("user", "name email phone")
         .populate("library", "name address phone upiId openTime closeTime");
@@ -75,7 +78,7 @@ export const studentPortalLookup = async (req, res) => {
     // 4. Check by User Name
     if (!student && cleanIdentifier.length >= 3) {
       const user = await User.findOne({
-        name: { $regex: new RegExp(`^${cleanIdentifier}$`, "i") },
+        name: { $regex: new RegExp(`^${safeIdentifier}$`, "i") },
         role: "STUDENT",
       });
 

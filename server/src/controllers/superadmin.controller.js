@@ -100,7 +100,8 @@ export const getAllTenants = async (req, res) => {
     }
 
     if (search) {
-      const regex = new RegExp(search.trim(), "i");
+      const safeSearch = String(search.trim()).replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      const regex = new RegExp(safeSearch, "i");
       // Search in Library name or address or phone
       query.$or = [{ name: regex }, { address: regex }, { phone: regex }];
     }

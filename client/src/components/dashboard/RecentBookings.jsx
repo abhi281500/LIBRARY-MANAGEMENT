@@ -30,13 +30,17 @@ function RecentBookings({ bookings = [] }) {
             >
 
               <div>
-                <p className="font-medium text-gray-900">
+                <p className="font-bold text-gray-900">
                   {booking.student?.user?.name || "Unknown Student"}
                 </p>
 
-                <p className="mt-1 text-sm text-gray-500">
-                  Seat: {booking.seat?.seatNumber || "N/A"}
-                </p>
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                  <span>Desk: #{booking.seat?.seatNumber || "N/A"}</span>
+                  <span className="text-gray-300">•</span>
+                  <span className="font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px]">
+                    {booking.shift || "FULL_DAY"}
+                  </span>
+                </div>
               </div>
 
               <div className="text-right">
