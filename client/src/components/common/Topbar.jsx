@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../hooks/useAuth.jsx";
 import { getSubscription } from "../../services/library.service.js";
 import {
   Sparkles,
@@ -15,6 +16,8 @@ import QuickAdmissionModal from "./QuickAdmissionModal.jsx";
 
 function Topbar({ onMenuClick }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { logout } = useAuth();
   const [showQuickAdmission, setShowQuickAdmission] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -44,8 +47,9 @@ function Topbar({ onMenuClick }) {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
+    logout();
+    queryClient.clear();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -143,9 +147,11 @@ function Topbar({ onMenuClick }) {
           <button
             type="button"
             onClick={handleLogout}
-            className="rounded-xl border border-gray-200 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-100"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 shadow-2xs"
+            title="Log Out of Account"
           >
-            Logout
+            <LogOut className="w-3.5 h-3.5 text-gray-500 group-hover:text-rose-600" />
+            <span>Logout</span>
           </button>
         </div>
       </header>

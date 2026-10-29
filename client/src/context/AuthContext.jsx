@@ -41,11 +41,11 @@ export function AuthProvider({ children }) {
     setUser(userData);
   };
   const logout = () => {
-  storage.removeToken();
-  setToken(null);
-  setUser(null);
-  setLoading(false);
-};
+    storage.clear();
+    setToken(null);
+    setUser(null);
+    setLoading(false);
+  };
 
   const value = useMemo(
     () => ({

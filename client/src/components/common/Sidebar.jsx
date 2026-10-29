@@ -1,4 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth.jsx";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Users,
@@ -11,10 +13,21 @@ import {
   Sparkles,
   MessageSquare,
   UserCheck,
+  LogOut,
   X,
 } from "lucide-react";
 
 function Sidebar({ isOpen, onClose }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    if (onClose) onClose();
+    logout();
+    queryClient.clear();
+    navigate("/login", { replace: true });
+  };
   const menuItems = [
     {
       label: "Dashboard",
@@ -162,8 +175,8 @@ function Sidebar({ isOpen, onClose }) {
           })}
         </nav>
 
-        {/* Footer / Smart Automation Status */}
-        <div className="border-t border-slate-800/80 p-4 bg-slate-950/40">
+        {/* Footer / Smart Automation Status & Sign Out */}
+        <div className="border-t border-slate-800/80 p-4 bg-slate-950/40 space-y-2">
           <div className="rounded-xl bg-slate-800/60 p-3 border border-slate-700/50 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-amber-400" />
@@ -174,6 +187,15 @@ function Sidebar({ isOpen, onClose }) {
             </div>
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-3 w-full px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </button>
         </div>
       </aside>
     </>
